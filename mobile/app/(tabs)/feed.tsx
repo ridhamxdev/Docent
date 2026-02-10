@@ -4,10 +4,12 @@ import { apiClient } from "../../lib/apiClient";
 import { useAuth } from "../../context/AuthContext";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import PostCard from "../../components/PostCard";
 import PostModal from "../../components/PostModal";
 
 export default function FeedScreen() {
+    const router = useRouter();
     const { user } = useAuth();
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function FeedScreen() {
                     <TouchableOpacity>
                         <Ionicons name="notifications-outline" size={24} color="#1E3A8A" />
                     </TouchableOpacity>
-                    <TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push('/messages')}>
                         <Ionicons name="chatbubble-ellipses-outline" size={24} color="#1E3A8A" />
                     </TouchableOpacity>
                 </View>
