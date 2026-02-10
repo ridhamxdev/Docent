@@ -55,7 +55,7 @@ export default function ProfileScreen() {
     if (!user) return <View className="flex-1 bg-white" />;
 
     return (
-        <View className="flex-1 bg-white">
+        <View className="flex-1 bg-gray-50">
             <StatusBar style="light" />
             <ScrollView
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
@@ -75,25 +75,25 @@ export default function ProfileScreen() {
                 />
 
                 {/* Tabs */}
-                <View className="flex-row border-b border-gray-100 mt-2">
+                <View className="mx-6 mb-4 flex-row bg-gray-200 p-1 rounded-2xl">
                     <TouchableOpacity
                         onPress={() => setActiveTab('posts')}
-                        className={`flex-1 items-center py-3 border-b-2 ${activeTab === 'posts' ? 'border-black' : 'border-transparent'}`}
+                        className={`flex-1 items-center py-2 rounded-xl ${activeTab === 'posts' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
                     >
-                        <Ionicons name="grid-outline" size={24} color={activeTab === 'posts' ? "black" : "gray"} />
+                        <Text className={`font-bold ${activeTab === 'posts' ? 'text-black' : 'text-gray-500'}`}>Posts</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setActiveTab('about')}
-                        className={`flex-1 items-center py-3 border-b-2 ${activeTab === 'about' ? 'border-black' : 'border-transparent'}`}
+                        className={`flex-1 items-center py-2 rounded-xl ${activeTab === 'about' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
                     >
-                        <Ionicons name="information-circle-outline" size={24} color={activeTab === 'about' ? "black" : "gray"} />
+                        <Text className={`font-bold ${activeTab === 'about' ? 'text-black' : 'text-gray-500'}`}>About</Text>
                     </TouchableOpacity>
                     {(user?.role === 'doctor' || user?.isVerified) && (
                         <TouchableOpacity
                             onPress={() => setActiveTab('visits')}
-                            className={`flex-1 items-center py-3 border-b-2 ${activeTab === 'visits' ? 'border-black' : 'border-transparent'}`}
+                            className={`flex-1 items-center py-2 rounded-xl ${activeTab === 'visits' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
                         >
-                            <Ionicons name="calendar-outline" size={24} color={activeTab === 'visits' ? "black" : "gray"} />
+                            <Text className={`font-bold ${activeTab === 'visits' ? 'text-black' : 'text-gray-500'}`}>Visits</Text>
                         </TouchableOpacity>
                     )}
                 </View>

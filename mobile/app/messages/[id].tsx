@@ -5,6 +5,7 @@ import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import AppointmentRequestModal from '../../components/appointments/AppointmentRequestModal';
+import { initSocket } from '../../lib/socket';
 
 interface Message {
     id: string;
@@ -43,11 +44,38 @@ export default function ChatScreen() {
         }
     };
 
+    // Socket Listener
+    useEffect(() => {
+        if (user?.uid) {
+            console.log("Initializing socket for", user.uid);
+            const socket = initSocket(user.uid);
+
+            socket.on('newMessage', (msg: Message) => {
+                console.log("Received new message", msg);
+                // Check if message belongs to current chat (either from OTHER person to ME, or ME to OTHER (on other device))
+                if ((msg.senderId === id && msg.receiverId === user.uid) ||
+                    (msg.senderId === user.uid && msg.receiverId === id)) {
+
+                    setMessages(prev => {
+                        // Avoid duplicates
+                        if (prev.find(m => m.id === msg.id)) return prev;
+                        return [...prev, msg].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                    });
+                }
+            });
+
+            return () => {
+                socket.off('newMessage');
+            };
+        }
+    }, [user?.uid, id]);
+
+    // Initial fetch (keep existing polling as backup or remove if socket is 100% reliable)
+    // For now, removing polling interval in favor of socket, but keeping initial fetch
     useEffect(() => {
         fetchMessages();
-        const interval = setInterval(fetchMessages, 3000);
-        return () => clearInterval(interval);
     }, [id, user?.uid]);
+
 
     // Scroll to bottom on new messages
     useEffect(() => {

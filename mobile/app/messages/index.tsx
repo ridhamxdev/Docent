@@ -5,6 +5,7 @@ import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { initSocket } from '../../lib/socket';
 
 interface Message {
     id: string;
@@ -92,11 +93,51 @@ export default function MessagesListScreen() {
         }
     }, [user?.uid]);
 
+    // ... inside MessagesListScreen ...
+
     useEffect(() => {
         fetchConversations();
-        const interval = setInterval(fetchConversations, 5000); // Poll every 5s
-        return () => clearInterval(interval);
-    }, [fetchConversations]);
+        // Remove polling if socket is reliable, or keep as backup (e.g. 30s instead of 5s)
+        // const interval = setInterval(fetchConversations, 5000); 
+        // return () => clearInterval(interval);
+
+        if (user?.uid) {
+            const socket = initSocket(user.uid);
+
+            socket.on('newMessage', (msg: Message) => {
+                console.log("List received new message", msg);
+                setConversations(prev => {
+                    const otherId = msg.senderId === user.uid ? msg.receiverId : msg.senderId;
+                    const existingIndex = prev.findIndex(c => c.id === otherId);
+
+                    const newTime = new Date(msg.createdAt).getTime();
+
+                    if (existingIndex !== -1) {
+                        // Update existing conversation
+                        const updated = [...prev];
+                        updated[existingIndex] = {
+                            ...updated[existingIndex],
+                            lastMessage: msg.content,
+                            time: newTime,
+                            unreadCount: (!msg.read && msg.receiverId === user.uid)
+                                ? updated[existingIndex].unreadCount + 1
+                                : updated[existingIndex].unreadCount
+                        };
+                        return updated.sort((a, b) => b.time - a.time);
+                    } else {
+                        // New conversation (fetch fresh or optimistically add if we have details)
+                        // Trigger fetch to get correct name/avatar if needed
+                        fetchConversations();
+                        return prev;
+                    }
+                });
+            });
+
+            return () => {
+                socket.off('newMessage');
+            };
+        }
+    }, [user?.uid, fetchConversations]);
 
     const onRefresh = () => {
         setRefreshing(true);

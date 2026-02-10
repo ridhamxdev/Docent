@@ -22,71 +22,69 @@ interface Props {
 
 export default function ProfileHeader({ user, isOwner, onEdit, onMenu }: Props) {
     return (
-        <View className="mb-4">
-            {/* Cover Photo */}
-            <View className="h-40 relative bg-gray-200">
-                {user.coverPhoto ? (
-                    <Image source={{ uri: user.coverPhoto }} className="w-full h-full" resizeMode="cover" />
-                ) : (
-                    <LinearGradient
-                        colors={['#4facfe', '#00f2fe']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        className="w-full h-full"
+        <View className="mb-6 bg-white overflow-hidden pb-6 border-b border-gray-100">
+            {/* Professional Header Background */}
+            <View className="h-32 w-full absolute top-0 left-0 right-0 bg-slate-900">
+                {user.coverPhoto && (
+                    <Image
+                        source={{ uri: user.coverPhoto }}
+                        className="w-full h-full opacity-80"
+                        resizeMode="cover"
                     />
                 )}
+                <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.3)']}
+                    style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '100%' }}
+                />
+            </View>
 
-                {/* Menu Button */}
+            {/* Header Actions */}
+            <View className="flex-row justify-between items-center px-6 pt-12 mb-4 relative z-10">
+                {isOwner ? (
+                    <TouchableOpacity
+                        onPress={onEdit}
+                        className="w-10 h-10 rounded-full bg-white/20 items-center justify-center backdrop-blur-md"
+                    >
+                        <Ionicons name="pencil" size={20} color="white" />
+                    </TouchableOpacity>
+                ) : <View className="w-10" />}
+
                 {isOwner && (
                     <TouchableOpacity
                         onPress={onMenu}
-                        className="absolute top-4 right-4 bg-black/30 backdrop-blur-md p-2 rounded-full"
+                        className="w-10 h-10 rounded-full bg-white/20 items-center justify-center backdrop-blur-md"
                     >
-                        <Ionicons name="menu" size={24} color="white" />
+                        <Ionicons name="settings-outline" size={20} color="white" />
                     </TouchableOpacity>
                 )}
             </View>
 
-            {/* Profile Info */}
-            <View className="px-4 -mt-12 flex-row items-end">
-                {/* Avatar */}
-                <View className="w-24 h-24 rounded-2xl bg-gray-100 border-4 border-white overflow-hidden shadow-sm">
-                    {user.photoURL ? (
-                        <Image source={{ uri: user.photoURL }} className="w-full h-full" />
-                    ) : (
-                        <View className="w-full h-full items-center justify-center bg-gray-200">
-                            <Ionicons name="person" size={40} color="gray" />
-                        </View>
-                    )}
+            {/* Centered Profile Info */}
+            <View className="items-center mt-2">
+                {/* Avatar with Ring */}
+                <View className="p-1 rounded-full bg-white shadow-sm mb-3">
+                    <View className="w-28 h-28 rounded-full bg-gray-100 overflow-hidden">
+                        {user.photoURL ? (
+                            <Image source={{ uri: user.photoURL }} className="w-full h-full" />
+                        ) : (
+                            <View className="w-full h-full items-center justify-center bg-gray-200">
+                                <Ionicons name="person" size={48} color="gray" />
+                            </View>
+                        )}
+                    </View>
                 </View>
 
-                {/* Edit Button */}
-                {isOwner && (
-                    <TouchableOpacity
-                        onPress={onEdit}
-                        className="ml-auto mb-2 bg-gray-100 p-2 rounded-full border border-gray-200"
-                    >
-                        <Ionicons name="pencil" size={20} color="#374151" />
-                    </TouchableOpacity>
-                )}
-            </View>
-
-            {/* details */}
-            <View className="px-4 mt-3">
-                <Text className="text-2xl font-bold text-gray-900 flex-row items-center">
-                    {user.displayName || 'User'}
-                    {user.isVerified && <Text className="text-blue-500 text-lg"> ✓</Text>}
-                </Text>
-
-                {user.role !== 'patient' && (
-                    <Text className="text-gray-500 text-sm font-medium">
-                        {user.qualifications || user.role}
-                        {user.specialization && ` • ${user.specialization}`}
+                {/* Name & Badge */}
+                <View className="flex-row items-center mb-1">
+                    <Text className="text-2xl font-bold text-gray-900 tracking-tight">
+                        {user.displayName || 'User'}
                     </Text>
-                )}
+                    {user.isVerified && <Ionicons name="checkmark-circle" size={20} color="#3B82F6" style={{ marginLeft: 6 }} />}
+                </View>
 
-                <Text className="text-gray-600 mt-2 text-sm leading-5">
-                    {user.bio || 'No bio added yet.'}
+                {/* Role / Bio */}
+                <Text className="text-gray-500 font-medium text-sm mb-4 text-center px-8 leading-5">
+                    {user.bio || (user.role === 'doctor' ? 'Medical Professional' : 'Docent Member')}
                 </Text>
             </View>
         </View>

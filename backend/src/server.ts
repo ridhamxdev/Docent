@@ -20,7 +20,15 @@ import notificationsRouter from './routes/notifications.routes'
 
 import path from 'path'
 
+import { createServer } from 'http';
+import { initSocket } from './socket';
+
 const app = express()
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initSocket(httpServer);
+
 app.use(cors({ origin: '*' }))
 app.use(express.json())
 // Serve uploaded files statically
@@ -41,7 +49,7 @@ app.use('/notifications', notificationsRouter)
 const PORT = process.env.PORT || 5555
 const TABLE_NAME = 'Posts'
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`✅ Backend running on port ${PORT}`);
   console.log(`- Local: http://localhost:${PORT}`);
   console.log(`- Network: http://<your-ip-address>:${PORT}`);

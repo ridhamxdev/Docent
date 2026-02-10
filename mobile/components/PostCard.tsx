@@ -1,36 +1,36 @@
-import { View, Text, Image, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Dimensions, ImageBackground } from 'react-native';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../lib/apiClient';
+// @ts-ignore
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
+// Standard vertical aspect ratio (4:5) is 1.25, or use 1 for square. 1.3 is a bit tall.
+// Reducing to 1.25 for a standard "Portrait" look that fits better on screens.
+const CARD_HEIGHT = width * 1.2;
 
 interface PostCardProps {
     post: any;
     onLike?: () => void;
     onComment?: () => void;
+    onPress?: () => void;
 }
 
-export default function PostCard({ post, onLike, onComment }: PostCardProps) {
+export default function PostCard({ post, onLike, onComment, onPress }: PostCardProps) {
     const { user } = useAuth();
     const [liked, setLiked] = useState(post.liked || (post.likedBy && user?.uid && post.likedBy.includes(user.uid)) || false);
     const [likesCount, setLikesCount] = useState<number>(post.likes || 0);
 
-    const mediaItems = post.images && post.images.length > 0
-        ? post.images
-        : post.image
-            ? [post.image]
-            : post.video
-                ? [post.video]
-                : [];
+    const mediaItem = (post.images && post.images.length > 0) ? post.images[0] : post.image;
+    const isVideo = mediaItem && (mediaItem.includes('mp4') || mediaItem.includes('video'));
 
     const handleLike = async () => {
         const isLiked = !liked;
         setLiked(isLiked);
         setLikesCount((prev: number) => isLiked ? prev + 1 : prev - 1);
-
         try {
             await apiClient.post(`/posts/${post.id}/like`, { userId: user?.uid });
             if (onLike) onLike();
@@ -42,84 +42,82 @@ export default function PostCard({ post, onLike, onComment }: PostCardProps) {
     };
 
     return (
-        <View className="bg-white mb-4 border-b border-gray-100 pb-4">
-            {/* Header */}
-            <View className="flex-row items-center p-3">
+        <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={onPress}
+            className="mb-6 rounded-[32px] overflow-hidden bg-white shadow-sm mx-4"
+            style={{ height: CARD_HEIGHT }}
+        >
+            {/* Background Content */}
+            <View className="absolute inset-0 bg-gray-900">
+                {mediaItem ? (
+                    isVideo ? (
+                        <Video
+                            source={{ uri: mediaItem }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode={ResizeMode.COVER}
+                            isLooping
+                            shouldPlay={false} // Autoplay might be too heavy
+                        />
+                    ) : (
+                        <Image
+                            source={{ uri: mediaItem }}
+                            className="w-full h-full"
+                            resizeMode="cover"
+                        />
+                    )
+                ) : (
+                    <View className="w-full h-full justify-center items-center bg-gray-100">
+                        <Text className="text-gray-400 p-8 text-center text-lg">{post.content?.substring(0, 100)}...</Text>
+                    </View>
+                )}
+            </View>
+
+            {/* Gradient Overlay */}
+            <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.8)']}
+                style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%' }}
+            />
+
+            {/* Top Header Pill */}
+            <View className="absolute top-4 left-4 z-10 flex-row items-center bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-md">
                 <Image
                     source={{ uri: post.authorPhoto || `https://ui-avatars.com/api/?name=${post.author}&background=random` }}
-                    className="w-10 h-10 rounded-full bg-gray-200"
+                    className="w-6 h-6 rounded-full bg-gray-200 border border-white/50"
                 />
-                <View className="ml-3 flex-1">
-                    <View className="flex-row items-center">
-                        <Text className="font-bold text-gray-900">{post.author}</Text>
-                        {post.authorVerified && (
-                            <Ionicons name="checkmark-circle" size={14} color="#3B82F6" style={{ marginLeft: 4 }} />
-                        )}
+                <Text className="text-white font-bold text-xs ml-2 mr-1">{post.author}</Text>
+                {post.authorVerified && <Ionicons name="checkmark-circle" size={12} color="#60A5FA" />}
+            </View>
+
+            {/* Bottom Content Container */}
+            <View className="absolute bottom-0 left-0 right-0 p-5 pb-6 z-10">
+                {/* Tags */}
+                <View className="flex-row gap-2 mb-3 flex-wrap">
+                    <View className="bg-white/20 px-3 py-1 rounded-full border border-white/10">
+                        <Text className="text-white text-xs font-semibold tracking-wide">
+                            {post.category || 'Dentistry'}
+                        </Text>
                     </View>
-                    <Text className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</Text>
                 </View>
-                <TouchableOpacity>
-                    <Ionicons name="ellipsis-horizontal" size={20} color="gray" />
-                </TouchableOpacity>
+
+                {/* Text Content */}
+                <Text className="text-white text-lg font-bold leading-6 shadow-md mb-2 shadow-black/50" numberOfLines={3}>
+                    {post.content}
+                </Text>
+
+                <Text className="text-gray-300 text-xs mb-2 shadow-black/50">
+                    {new Date(post.createdAt).toLocaleDateString()}
+                </Text>
             </View>
 
-            {/* Media Carousel */}
-            {mediaItems.length > 0 && (
-                <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} className="w-full" style={{ height: 400 }}>
-                    {mediaItems.map((item: string, index: number) => (
-                        <View key={index} style={{ width: width, height: 400 }} className="bg-black justify-center items-center">
-                            {item.includes('mp4') || item.includes('video') ? (
-                                <Video
-                                    source={{ uri: item }}
-                                    style={{ width: '100%', height: '100%' }}
-                                    useNativeControls
-                                    resizeMode={ResizeMode.CONTAIN}
-                                    isLooping
-                                />
-                            ) : (
-                                <Image
-                                    source={{ uri: item }}
-                                    className="w-full h-full"
-                                    resizeMode="cover"
-                                />
-                            )}
-                        </View>
-                    ))}
-                </ScrollView>
-            )}
-
-            {/* Actions */}
-            <View className="flex-row items-center justify-between px-3 py-3">
-                <View className="flex-row items-center gap-4">
-                    <TouchableOpacity onPress={handleLike} className="flex-row items-center gap-1">
-                        <Ionicons name={liked ? "heart" : "heart-outline"} size={26} color={liked ? "#EF4444" : "black"} />
-                        {likesCount > 0 && <Text className="font-bold">{likesCount}</Text>}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={onComment} className="flex-row items-center gap-1">
-                        <Ionicons name="chatbubble-outline" size={24} color="black" />
-                        {post.comments?.length > 0 && <Text className="font-bold">{post.comments.length}</Text>}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity>
-                        <Ionicons name="paper-plane-outline" size={24} color="black" />
-                    </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity>
-                    <Ionicons name="bookmark-outline" size={24} color="black" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Caption */}
-            {post.content && (
-                <View className="px-3">
-                    <Text className="text-gray-900 leading-5">
-                        <Text className="font-bold mr-2">{post.author} </Text>
-                        {post.content}
-                    </Text>
-                </View>
-            )}
-        </View>
+            {/* Floating Action Button - Like */}
+            <TouchableOpacity
+                onPress={handleLike}
+                className="absolute bottom-6 right-5 w-14 h-14 rounded-full bg-white items-center justify-center shadow-lg"
+                style={{ elevation: 5 }}
+            >
+                <Ionicons name={liked ? "heart" : "heart"} size={28} color={liked ? "#EF4444" : "#E5E7EB"} />
+            </TouchableOpacity>
+        </TouchableOpacity>
     );
 }

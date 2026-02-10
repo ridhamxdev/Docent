@@ -1,4 +1,4 @@
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Image } from "react-native";
 import { useEffect, useState, useCallback } from "react";
 import { apiClient } from "../../lib/apiClient";
 import { useAuth } from "../../context/AuthContext";
@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import PostCard from "../../components/PostCard";
 import PostModal from "../../components/PostModal";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FeedScreen() {
     const router = useRouter();
@@ -49,28 +50,38 @@ export default function FeedScreen() {
     }
 
     return (
-        <View className="flex-1 bg-gray-50 pt-12">
+        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
             <StatusBar style="dark" />
 
             {/* Header */}
-            <View className="px-4 pb-4 border-b border-gray-200 bg-white mb-2 flex-row justify-between items-center">
-                <Text className="text-2xl font-bold text-blue-900">Docent</Text>
-                <View className="flex-row gap-4">
-                    <TouchableOpacity>
-                        <Ionicons name="search" size={24} color="#1E3A8A" />
+            <View className="px-5 py-3 flex-row justify-between items-center z-10 bg-white">
+                <View className="flex-row items-center gap-2">
+                    {/* <Image source={require('../../assets/icon.png')} className="w-8 h-8 rounded-lg" /> */}
+                    <Text className="text-2xl font-black text-gray-900 tracking-tighter">Docent.</Text>
+                </View>
+
+                <View className="flex-row gap-3">
+                    <TouchableOpacity className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center">
+                        <Ionicons name="search-outline" size={22} color="black" />
                     </TouchableOpacity>
-                    <TouchableOpacity>
-                        <Ionicons name="notifications-outline" size={24} color="#1E3A8A" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push('/messages')}>
-                        <Ionicons name="chatbubble-ellipses-outline" size={24} color="#1E3A8A" />
+                    <TouchableOpacity
+                        onPress={() => router.push('/messages')}
+                        className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center"
+                    >
+                        <Ionicons name="chatbubble-ellipses-outline" size={22} color="black" />
                     </TouchableOpacity>
                 </View>
             </View>
 
             <FlatList
                 data={posts}
-                renderItem={({ item }) => <PostCard post={item} />}
+                renderItem={({ item }) => (
+                    <PostCard
+                        post={item}
+                        onPress={() => router.push(`/post/${item.id}`)}
+                        onComment={() => router.push(`/post/${item.id}`)}
+                    />
+                )}
                 keyExtractor={(item) => item.id || item._id || Math.random().toString()}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#2563EB"]} />
@@ -81,7 +92,8 @@ export default function FeedScreen() {
                         <Text className="text-gray-500 mt-4 text-center">No posts yet.{'\n'}Be the first to share something!</Text>
                     </View>
                 }
-                contentContainerStyle={{ paddingBottom: 100 }}
+                contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+                className="bg-gray-50"
             />
 
             {/* FAB */}
@@ -97,6 +109,6 @@ export default function FeedScreen() {
                 onClose={() => setModalVisible(false)}
                 onPostSuccess={onRefresh}
             />
-        </View>
+        </SafeAreaView>
     );
 }

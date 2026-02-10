@@ -5,7 +5,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const ITEM_SIZE = (SCREEN_WIDTH - 4) / 3; // 4px gap roughly
+const GAP = 1;
+const ITEM_SIZE = (SCREEN_WIDTH - (GAP * 2)) / 3;
 
 interface Post {
     id: string;
@@ -47,8 +48,8 @@ export default function UserPostsGrid({ userId, role, setPostCount }: Props) {
                     // For 'My Profile', we expect to see MY posts.
                     // Ideally backend supports /users/:id/posts or /posts?author=...
 
-                    setPosts(data);
-                    if (setPostCount) setPostCount(data.length);
+                    setPosts(myPosts);
+                    if (setPostCount) setPostCount(myPosts.length);
                 }
             } catch (error) {
                 console.error("Failed to load user posts", error);
@@ -65,10 +66,11 @@ export default function UserPostsGrid({ userId, role, setPostCount }: Props) {
 
         return (
             <TouchableOpacity
-                style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginBottom: 2, marginRight: 2 }}
+                style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginBottom: GAP }}
                 onPress={() => {
-                    // Option 1: Open Post Modal/Detail
-                    // Option 2: Navigate to a Feed filtered by this post
+                    if (item.id) {
+                        router.push(`/post/${item.id}`);
+                    }
                 }}
             >
                 {imageUrl ? (
@@ -102,12 +104,13 @@ export default function UserPostsGrid({ userId, role, setPostCount }: Props) {
     );
 
     return (
-        <View className="mt-2 flex-row flex-wrap">
+        <View className="mt-2 flex-row flex-wrap" style={{ gap: GAP }}>
             {posts.map((post) => (
                 <View key={post.id}>
                     {renderItem({ item: post })}
                 </View>
             ))}
+            {/* Empty placeholders to fill grid if needed, or just let it wrap left */}
         </View>
     );
 }

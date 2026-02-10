@@ -22,6 +22,23 @@ router.get('/', async (req, res) => {
   }
 })
 
+/* ---------- GET POST BY ID ---------- */
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const post = await getPostById(id);
+
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    res.json(post);
+  } catch (err) {
+    console.error('Get Post Error:', err);
+    res.status(500).json({ error: 'Failed to fetch post' });
+  }
+})
+
 /* ---------- CREATE POST ---------- */
 router.post('/', upload.array('files'), async (req, res) => {
   try {
