@@ -1,0 +1,65 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User Profiles
+    // Anyone can read basic profile info (needed for social feed)
+    // Only the user can edit their own profile
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId; // Or admin only? Leaving as owner for now.
+    }
+
+    // Appointments
+    // Doctors can read appointments assigned to them (or confirmed ones)
+    // Patients can read their own appointments
+    // Create/Update logic handles business rules via backend/transaction, but basic rules here:
+    match /appointments/{appointmentId} {
+      allow read: if request.auth != null && (
+        resource.data.patientId == request.auth.uid || 
+        resource.data.doctorId == request.auth.uid
+      );
+      // Creation is currently done via Server Action / API mostly, but if client does it:
+      allow create: if request.auth != null && request.resource.data.patientId == request.auth.uid;
+      // Optimistic updates (if any)
+      allow update: if request.auth != null && (
+        resource.data.patientId == request.auth.uid || 
+        resource.data.doctorId == request.auth.uid
+      );
+    }
+
+    // Slots
+    // Public read (patients need to see slots)
+    // Doctors write their own slots
+    match /slots/{slotId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.role == 'doctor'; // If custom claims used
+      // Fallback if no custom claims: check doctorId field
+      allow create: if request.auth != null && request.resource.data.doctorId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.doctorId == request.auth.uid;
+    }
+
+    // Posts & Content
+    // Public read
+    // Authenticated write
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+    }
+
+    // Comments
+    match /comments/{commentId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
