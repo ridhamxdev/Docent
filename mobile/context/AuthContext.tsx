@@ -50,7 +50,7 @@ type AuthContextType = {
     loading: boolean;
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateProfilePhoto: (url: string) => Promise<void>;
-    login: (email: string, password: string, role: UserRole) => Promise<void>;
+    login: (email: string, password: string, role?: UserRole) => Promise<void>;
     register: (email: string, password: string, role: UserRole, additionalData?: any) => Promise<void>;
     loginWithGoogle: (role: UserRole) => Promise<void>;
     loginWithApple: (role: UserRole) => Promise<void>;
@@ -167,21 +167,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const login = async (email: string, password: string, role: UserRole) => {
+    const login = async (email: string, password: string, role?: UserRole) => {
         try {
             const result = await signInWithEmailAndPassword(auth, email, password);
 
-            // Verify role matches
             const userDoc = await getDoc(doc(db, "users", result.user.uid));
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                if (userData.role !== role) {
+
+                // Only enforce role check if a specific role is requested
+                if (role && userData.role !== role) {
                     await signOut(auth);
                     throw new Error(`Invalid role. This account is registered as a ${userData.role}.`);
                 }
 
+                // Redirect based on onboarding status
                 if (userData.isOnboarded) {
-                    router.replace('/feed');
+                    // Default redirect for mobile - likely to the main tabs
+                    router.replace('/(tabs)/study');
                 } else {
                     router.replace('/onboarding');
                 }

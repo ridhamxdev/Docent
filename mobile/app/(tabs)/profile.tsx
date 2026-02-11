@@ -1,4 +1,5 @@
 import { View, Text, ScrollView, RefreshControl, Alert, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from "../../context/AuthContext";
 import { StatusBar } from "expo-status-bar";
@@ -12,6 +13,7 @@ import DoctorSlotsList from '../../components/appointments/DoctorSlotsList';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
+    const router = useRouter();
     const { user, logout, updateProfile } = useAuth();
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({ followers: 0, following: 0, posts: 0 });
@@ -45,7 +47,7 @@ export default function ProfileScreen() {
             "Options",
             [
                 { text: "Edit Profile", onPress: () => setShowEditModal(true) },
-                { text: "Settings (Dark Mode)", onPress: () => console.log("Settings") },
+                { text: "Settings", onPress: () => router.push('/settings') },
                 { text: "Log Out", onPress: logout, style: "destructive" },
                 { text: "Cancel", style: "cancel" }
             ]
@@ -65,7 +67,7 @@ export default function ProfileScreen() {
                     user={user}
                     isOwner={true}
                     onEdit={() => setShowEditModal(true)}
-                    onMenu={handleMenu}
+                    onMenu={() => router.push('/settings')}
                 />
 
                 <ProfileStats
@@ -119,6 +121,22 @@ export default function ProfileScreen() {
                 ) : (
                     <View className="p-4 bg-gray-50 min-h-[200px]">
                         <View className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+                            {user?.role === 'patient' && (
+                                <TouchableOpacity
+                                    onPress={() => router.push('/profile/role-upgrade')}
+                                    className="w-full bg-slate-900 p-4 rounded-xl flex-row items-center justify-center shadow-lg shadow-slate-200 mb-6"
+                                >
+                                    <View className="w-8 h-8 bg-white/20 rounded-full items-center justify-center mr-3">
+                                        <Ionicons name="briefcase" size={16} color="white" />
+                                    </View>
+                                    <View>
+                                        <Text className="text-white font-bold text-base">Become a Professional</Text>
+                                        <Text className="text-slate-400 text-xs">Join as a Dentist or Student</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color="white" style={{ marginLeft: "auto" }} />
+                                </TouchableOpacity>
+                            )}
+
                             <View className="flex-row justify-between border-b border-gray-100 pb-2">
                                 <Text className="font-bold text-gray-500">Email</Text>
                                 <Text className="text-gray-900">{user?.email}</Text>

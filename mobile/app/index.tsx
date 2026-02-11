@@ -1,60 +1,73 @@
-import { View, Text, TouchableOpacity } from "react-native";
-import { Link } from "expo-router";
+import { useEffect } from 'react';
+import { View, Image, Text } from 'react-native';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withDelay,
+    withSequence,
+    withTiming,
+    runOnJS
+} from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 
-export default function LandingPage() {
+export default function SplashScreen() {
+    const router = useRouter();
+    const scale = useSharedValue(0);
+    const opacity = useSharedValue(0);
+    const textOpacity = useSharedValue(0);
+
+    useEffect(() => {
+        // Logo Animation
+        scale.value = withSequence(
+            withTiming(0, { duration: 0 }),
+            withSpring(1, { damping: 12 })
+        );
+        opacity.value = withTiming(1, { duration: 1000 });
+
+        // Text Animation (delayed)
+        textOpacity.value = withDelay(800, withTiming(1, { duration: 800 }));
+
+        // Navigation after animation
+        const timeout = setTimeout(() => {
+            router.replace('/welcome');
+        }, 2500);
+
+        return () => clearTimeout(timeout);
+    }, []);
+
+    const logoStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+        opacity: opacity.value,
+    }));
+
+    const textStyle = useAnimatedStyle(() => ({
+        opacity: textOpacity.value,
+    }));
+
     return (
-        <View className="flex-1 items-center justify-center bg-gray-50 px-4">
-            <Text className="text-4xl font-extrabold text-blue-900 mb-2">
-                Welcome to <Text className="text-blue-600">Docent</Text>
-            </Text>
-            <Text className="text-lg text-gray-600 text-center mb-12">
-                The all-in-one platform for dentists, students, and patients.
-            </Text>
+        <View className="flex-1 bg-white items-center justify-center">
+            <StatusBar style="dark" />
 
-            <View className="w-full max-w-sm gap-6">
-                {/* Dentist Card */}
-                <Link href="/auth/dentist" asChild>
-                    <TouchableOpacity className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex-row items-center gap-4">
-                        <View className="w-12 h-12 bg-blue-100 rounded-2xl items-center justify-center">
-                            <Text className="text-2xl">👨‍⚕️</Text>
-                        </View>
-                        <View className="flex-1">
-                            <Text className="text-xl font-bold text-gray-900">Dentist</Text>
-                            <Text className="text-blue-600 text-xs font-bold">VERIFIED ACCESS</Text>
-                        </View>
-                    </TouchableOpacity>
-                </Link>
+            {/* Animated Logo */}
+            <Animated.View style={logoStyle} className="items-center">
+                <Image
+                    source={require('../assets/icon.png')}
+                    style={{ width: 120, height: 120, borderRadius: 24 }}
+                    resizeMode="contain"
+                />
+            </Animated.View>
 
-                {/* Student Card */}
-                <Link href="/auth/student" asChild>
-                    <TouchableOpacity className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex-row items-center gap-4">
-                        <View className="w-12 h-12 bg-teal-100 rounded-2xl items-center justify-center">
-                            <Text className="text-2xl">🎓</Text>
-                        </View>
-                        <View className="flex-1">
-                            <Text className="text-xl font-bold text-gray-900">Dental Student</Text>
-                            <Text className="text-teal-600 text-xs font-bold">LEARNING HUB</Text>
-                        </View>
-                    </TouchableOpacity>
-                </Link>
-
-                {/* Patient Card */}
-                <Link href="/auth/patient" asChild>
-                    <TouchableOpacity className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex-row items-center gap-4">
-                        <View className="w-12 h-12 bg-purple-100 rounded-2xl items-center justify-center">
-                            <Text className="text-2xl">🤒</Text>
-                        </View>
-                        <View className="flex-1">
-                            <Text className="text-xl font-bold text-gray-900">Patient</Text>
-                            <Text className="text-purple-600 text-xs font-bold">INSTANT CARE</Text>
-                        </View>
-                    </TouchableOpacity>
-                </Link>
-            </View>
-
-            <Text className="absolute bottom-10 text-gray-400 text-sm font-medium">
-                © 2026 Docent Platform. All rights reserved.
-            </Text>
+            {/* Animated Text */}
+            <Animated.View style={[textStyle, { marginTop: 24 }]}>
+                <Text className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                    Docent
+                </Text>
+                <Text className="text-slate-500 text-center mt-2 font-medium tracking-wide text-sm uppercase">
+                    Your Dental Companion
+                </Text>
+            </Animated.View>
         </View>
     );
 }
