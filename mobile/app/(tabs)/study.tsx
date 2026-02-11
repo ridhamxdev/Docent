@@ -27,7 +27,7 @@ export default function StudyScreen() {
     const [uploadModalVisible, setUploadModalVisible] = useState(false);
     const [quizModalVisible, setQuizModalVisible] = useState(false);
 
-    const canUpload = user?.role === 'doctor' || user?.isVerified;
+    const canUpload = user?.role === 'dentist' || user?.isVerified;
 
     const fetchMaterials = useCallback(async () => {
         setLoading(true);

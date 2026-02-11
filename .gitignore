@@ -16,7 +16,7 @@ out/
 # Production
 build/
 dist/
-frontend/
+# frontend/
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
