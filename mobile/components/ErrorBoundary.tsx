@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
-import { Restart } from 'expo-restart'; // You might need to install this: npx expo install expo-restart
+// import { Restart } from 'expo-restart'; // Removed unused import
 
 interface Props {
     children: ReactNode;

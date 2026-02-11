@@ -4,15 +4,19 @@ import { Platform } from 'react-native';
 // Use 10.0.2.2 for Android Emulator, localhost for iOS Simulator
 // For physical devices, you must use your machine's local IP address (e.g., 192.168.1.x)
 const getBaseUrl = () => {
-    if (process.env.EXPO_PUBLIC_API_URL) {
-        return process.env.EXPO_PUBLIC_API_URL;
+    const envUrl = process.env.EXPO_PUBLIC_API_URL;
+    // If a specific non-localhost URL is provided (e.g. LAN IP), use it.
+    if (envUrl && !envUrl.includes('localhost')) {
+        return envUrl;
     }
 
-    // Default fallback for development
+    // For Android Emulator, localhost must be 10.0.2.2
     if (Platform.OS === 'android') {
         return 'http://10.0.2.2:5555';
     }
-    return 'http://localhost:5555';
+
+    // Default for iOS / Web
+    return envUrl || 'http://localhost:5555';
 };
 
 const API_URL = getBaseUrl();
