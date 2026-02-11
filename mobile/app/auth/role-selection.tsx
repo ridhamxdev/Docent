@@ -11,7 +11,7 @@ export default function RoleSelectionScreen() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
-    const handleSelectRole = async (role: 'doctor' | 'student' | 'patient') => {
+    const handleSelectRole = async (role: 'dentist' | 'student' | 'patient') => {
         if (!auth.currentUser) return;
         setLoading(true);
 
@@ -22,7 +22,7 @@ export default function RoleSelectionScreen() {
                 displayName: auth.currentUser.displayName,
                 photoURL: auth.currentUser.photoURL,
                 role: role,
-                isVerified: role !== 'doctor', // Doctors pending verification
+                isVerified: role !== 'dentist', // Doctors pending verification
                 isOnboarded: false,
                 createdAt: new Date().toISOString()
             };
@@ -49,7 +49,7 @@ export default function RoleSelectionScreen() {
 
             <View className="gap-4">
                 <TouchableOpacity
-                    onPress={() => handleSelectRole('doctor')}
+                    onPress={() => handleSelectRole('dentist')}
                     className="p-6 bg-blue-50 border border-blue-100 rounded-2xl flex-row items-center gap-4"
                 >
                     <View className="bg-blue-100 p-3 rounded-xl">

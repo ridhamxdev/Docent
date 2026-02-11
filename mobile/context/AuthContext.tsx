@@ -11,9 +11,10 @@ import {
 import { auth, db } from "../lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from "../lib/apiClient";
 
 // Role types
-export type UserRole = 'doctor' | 'student' | 'patient' | 'admin';
+export type UserRole = 'dentist' | 'student' | 'patient' | 'admin';
 
 // User type with RBAC fields
 export type User = {
@@ -203,13 +204,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 uid: result.user.uid,
                 email,
                 role,
-                isVerified: role === 'doctor' ? false : true, // Doctors need verification
+                isVerified: role === 'dentist' ? false : true, // Doctors need verification
                 isOnboarded: false,
                 createdAt: new Date().toISOString(),
                 ...additionalData
             };
 
             await setDoc(doc(db, "users", result.user.uid), userData);
+
+            // Sync with Backend (DynamoDB)
+            try {
+                await apiClient.post('/auth/register', {
+                    uid: result.user.uid,
+                    email,
+                    password,
+                    name: additionalData.displayName || "User",
+                    role,
+                    ...additionalData
+                });
+            } catch (backendError) {
+                console.error("Backend sync failed:", backendError);
+            }
 
             // Force refresh user to minimal state before redirect
             setUser(userData as User);

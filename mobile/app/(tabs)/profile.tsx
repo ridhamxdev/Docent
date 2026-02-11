@@ -88,7 +88,7 @@ export default function ProfileScreen() {
                     >
                         <Text className={`font-bold ${activeTab === 'about' ? 'text-black' : 'text-gray-500'}`}>About</Text>
                     </TouchableOpacity>
-                    {(user?.role === 'doctor' || user?.isVerified) && (
+                    {(user?.role === 'dentist' || user?.isVerified) && (
                         <TouchableOpacity
                             onPress={() => setActiveTab('visits')}
                             className={`flex-1 items-center py-2 rounded-xl ${activeTab === 'visits' ? 'bg-white shadow-sm' : 'bg-transparent'}`}

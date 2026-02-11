@@ -5,9 +5,9 @@ import { createUser, getUserByEmail } from '../services/dynamo.service'
 export const register = async (req: Request, res: Response) => {
     try {
         const {
-            email, password, name, role,
+            email, password, name, role, uid,
             // Dentist
-            documentUrl,
+            documentUrl, specialization, qualification, experience, practice, bio,
             // Student
             college, year,
             // Patient
@@ -24,6 +24,7 @@ export const register = async (req: Request, res: Response) => {
         const passwordHash = password;
 
         const newUser = await createUser({
+            id: uid, // Use Firebase UID if provided
             email,
             passwordHash,
             name,
@@ -36,6 +37,11 @@ export const register = async (req: Request, res: Response) => {
             sex,
             state,
             district,
+            specialization,
+            qualification,
+            experience,
+            practice,
+            bio,
             profileImage: `https://ui-avatars.com/api/?name=${name}&background=random`
         })
 

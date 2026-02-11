@@ -137,7 +137,7 @@ export interface VisitSlot {
 
 export async function createUser(userData: Partial<User>) {
   const user = {
-    id: uuid(),
+    id: userData.id || uuid(),
     createdAt: Date.now(),
     type: 'user',
     ...userData,

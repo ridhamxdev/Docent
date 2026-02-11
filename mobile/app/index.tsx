@@ -13,7 +13,7 @@ export default function LandingPage() {
 
             <View className="w-full max-w-sm gap-6">
                 {/* Dentist Card */}
-                <Link href="/auth/doctor" asChild>
+                <Link href="/auth/dentist" asChild>
                     <TouchableOpacity className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100 flex-row items-center gap-4">
                         <View className="w-12 h-12 bg-blue-100 rounded-2xl items-center justify-center">
                             <Text className="text-2xl">👨‍⚕️</Text>
