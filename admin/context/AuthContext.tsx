@@ -17,7 +17,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 // Role types
-export type UserRole = 'doctor' | 'student' | 'patient' | 'admin';
+export type UserRole = 'dentist' | 'student' | 'patient' | 'admin';
 
 // User type with RBAC fields
 export type User = {
@@ -35,6 +35,7 @@ export type User = {
   bio?: string;
   about?: string;
   experience?: string;
+  qualification?: string;
   qualifications?: string;
   clinicAddress?: string;
   address?: string;
@@ -198,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: result.user.uid,
         email,
         role,
-        isVerified: role === 'doctor' ? false : true, // Doctors need verification
+        isVerified: role === 'dentist' ? false : true, // Dentists need verification
         isOnboarded: false,
         createdAt: new Date().toISOString(),
         ...additionalData
@@ -239,7 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           displayName: result.user.displayName,
           photoURL: result.user.photoURL,
           role,
-          isVerified: role !== 'doctor',
+          isVerified: role !== 'dentist',
           isOnboarded: false,
           createdAt: new Date().toISOString()
         };
@@ -289,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           displayName: result.user.displayName,
           photoURL: result.user.photoURL,
           role,
-          isVerified: role !== 'doctor',
+          isVerified: role !== 'dentist',
           isOnboarded: false,
           createdAt: new Date().toISOString()
         };

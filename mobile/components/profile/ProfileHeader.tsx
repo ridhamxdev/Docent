@@ -8,8 +8,13 @@ interface User {
     coverPhoto?: string | null;
     role?: string;
     bio?: string;
+    qualification?: string;
     qualifications?: string;
     specialization?: string;
+    experience?: string;
+    clinicName?: string;
+    collegeName?: string;
+    yearOfStudy?: string;
     isVerified?: boolean;
 }
 
@@ -20,7 +25,40 @@ interface Props {
     onMenu?: () => void;
 }
 
+function getRoleDisplay(user: User): string {
+    if (user.bio) return user.bio;
+
+    if (user.role === 'dentist') {
+        const parts: string[] = [];
+        if (user.specialization) parts.push(user.specialization);
+        if (user.qualification || user.qualifications) parts.push(user.qualification || user.qualifications || '');
+        if (user.experience) parts.push(`${user.experience} yrs exp`);
+        if (parts.length > 0) return parts.join(' · ');
+        return 'Dental Professional';
+    }
+
+    if (user.role === 'student') {
+        const parts: string[] = [];
+        if (user.collegeName) parts.push(user.collegeName);
+        if (user.yearOfStudy) parts.push(user.yearOfStudy);
+        if (parts.length > 0) return parts.join(' · ');
+        return 'Dental Student';
+    }
+
+    return 'Docent Member';
+}
+
+function getRoleBadge(user: User): { label: string; color: string } | null {
+    if (user.role === 'dentist' && user.isVerified) return { label: 'Verified Dentist', color: '#3B82F6' };
+    if (user.role === 'dentist' && !user.isVerified) return { label: 'Pending Verification', color: '#F59E0B' };
+    if (user.role === 'student' && user.isVerified) return { label: 'Student', color: '#14B8A6' };
+    if (user.role === 'student' && !user.isVerified) return { label: 'Pending Verification', color: '#F59E0B' };
+    return null;
+}
+
 export default function ProfileHeader({ user, isOwner, onEdit, onMenu }: Props) {
+    const roleBadge = getRoleBadge(user);
+
     return (
         <View className="mb-6 bg-white overflow-hidden pb-6 border-b border-gray-100">
             {/* Professional Header Background */}
@@ -82,11 +120,19 @@ export default function ProfileHeader({ user, isOwner, onEdit, onMenu }: Props) 
                     {user.isVerified && <Ionicons name="checkmark-circle" size={20} color="#3B82F6" style={{ marginLeft: 6 }} />}
                 </View>
 
-                {/* Role / Bio */}
+                {/* Role Badge */}
+                {roleBadge && (
+                    <View style={{ backgroundColor: roleBadge.color + '18', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, marginBottom: 4 }}>
+                        <Text style={{ color: roleBadge.color, fontSize: 12, fontWeight: '600' }}>{roleBadge.label}</Text>
+                    </View>
+                )}
+
+                {/* Role Info / Bio */}
                 <Text className="text-gray-500 font-medium text-sm mb-4 text-center px-8 leading-5">
-                    {user.bio || (user.role === 'doctor' ? 'Medical Professional' : 'Docent Member')}
+                    {getRoleDisplay(user)}
                 </Text>
             </View>
         </View>
     );
 }
+

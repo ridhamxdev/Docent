@@ -19,20 +19,24 @@ export default function VerificationsPage() {
 
     async function fetchPendingDoctors() {
         try {
+            // Query all unverified users (role is 'dentist' or 'student', NOT 'doctor')
             const q = query(
                 collection(db, "users"),
-                where("role", "==", "doctor"),
                 where("isVerified", "==", false)
             );
 
             const querySnapshot = await getDocs(q);
-            const doctors: User[] = [];
-            querySnapshot.forEach((doc) => {
-                doctors.push(doc.data() as User);
+            const users: User[] = [];
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data() as User;
+                // Only show dentists and students (not patients)
+                if (data.role === 'dentist' || data.role === 'student') {
+                    users.push(data);
+                }
             });
-            setPendingDoctors(doctors);
+            setPendingDoctors(users);
         } catch (error) {
-            console.error("Error fetching pending doctors:", error);
+            console.error("Error fetching pending users:", error);
         } finally {
             setLoading(false);
         }
@@ -78,8 +82,8 @@ export default function VerificationsPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-white">Doctor Verification</h1>
-            <p className="text-zinc-400">Review documents and approve doctor accounts.</p>
+            <h1 className="text-2xl font-bold text-white">Professional Verification</h1>
+            <p className="text-zinc-400">Review documents and approve dentist & student accounts.</p>
 
             {pendingDoctors.length === 0 ? (
                 <div className="p-8 rounded-xl bg-zinc-900 border border-zinc-800 text-center text-zinc-500">
@@ -94,24 +98,46 @@ export default function VerificationsPage() {
                                     <h3 className="font-bold text-white text-lg">{doctor.displayName || "No Name"}</h3>
                                     <p className="text-zinc-400 text-sm">{doctor.email}</p>
                                 </div>
-                                <span className="bg-amber-500/10 text-amber-400 text-xs px-2 py-1 rounded-full uppercase font-medium">
-                                    Pending
+                                <span className={`text-xs px-2 py-1 rounded-full uppercase font-medium ${doctor.role === 'dentist'
+                                        ? 'bg-blue-500/10 text-blue-400'
+                                        : 'bg-teal-500/10 text-teal-400'
+                                    }`}>
+                                    {doctor.role === 'dentist' ? 'Dentist' : 'Student'}
                                 </span>
                             </div>
 
                             <div className="space-y-2 text-sm text-zinc-300">
-                                <div className="flex justify-between">
-                                    <span>Qualification:</span>
-                                    <span className="font-medium text-white">{doctor.qualifications || "N/A"}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Experience:</span>
-                                    <span className="font-medium text-white">{doctor.experience || "N/A"}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>College:</span>
-                                    <span className="font-medium text-white">{doctor.collegeName || "N/A"}</span>
-                                </div>
+                                {doctor.role === 'dentist' ? (
+                                    <>
+                                        <div className="flex justify-between">
+                                            <span>Qualification:</span>
+                                            <span className="font-medium text-white">{doctor.qualification || doctor.qualifications || "N/A"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Specialization:</span>
+                                            <span className="font-medium text-white">{doctor.specialization || "N/A"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Experience:</span>
+                                            <span className="font-medium text-white">{doctor.experience || "N/A"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Clinic:</span>
+                                            <span className="font-medium text-white">{doctor.clinicAddress || "N/A"}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between">
+                                            <span>College:</span>
+                                            <span className="font-medium text-white">{doctor.collegeName || "N/A"}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Year:</span>
+                                            <span className="font-medium text-white">{doctor.yearOfStudy || "N/A"}</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             <div className="pt-2 border-t border-zinc-800">
