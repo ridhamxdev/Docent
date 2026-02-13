@@ -191,18 +191,18 @@ export default function UsersPage() {
                                                 <span
                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${user.role === "admin"
                                                         ? "bg-purple-500/10 text-purple-400"
-                                                        : user.role === "doctor"
+                                                        : ((user.role as string) === "doctor" || user.role === "dentist")
                                                             ? "bg-blue-500/10 text-blue-400"
                                                             : user.role === "student"
                                                                 ? "bg-teal-500/10 text-teal-400"
                                                                 : "bg-pink-500/10 text-pink-400"
                                                         }`}
                                                 >
-                                                    {user.role}
+                                                    {user.role === 'dentist' ? 'Dentist' : user.role}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
-                                                {user.role === "doctor" ? (
+                                                {((user.role as string) === "doctor" || user.role === "dentist" || user.role === "student") ? (
                                                     user.isVerified ? (
                                                         <div className="flex items-center gap-1.5 text-green-400">
                                                             <Check className="w-3.5 h-3.5" /> Verified
@@ -304,12 +304,12 @@ export default function UsersPage() {
                                 >
                                     <option value="patient">Patient</option>
                                     <option value="student">Student</option>
-                                    <option value="doctor">Doctor</option>
+                                    <option value="dentist">Dentist</option>
                                     <option value="admin">Admin</option>
                                 </select>
                             </div>
 
-                            {editForm.role === 'doctor' && (
+                            {((editForm.role as string) === 'doctor' || editForm.role === 'dentist' || editForm.role === 'student') && (
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-950 border border-zinc-800">
                                     <input
                                         type="checkbox"
@@ -319,7 +319,7 @@ export default function UsersPage() {
                                         className="w-5 h-5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900"
                                     />
                                     <label htmlFor="verify" className="text-zinc-300 font-medium cursor-pointer select-none">
-                                        Verified Doctor Status
+                                        Verified Status
                                     </label>
                                 </div>
                             )}

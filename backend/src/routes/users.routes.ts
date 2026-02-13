@@ -5,6 +5,54 @@ import { adminDb } from '../lib/firebaseAdmin'
 
 const router = Router()
 
+/* ---------- SEARCH DENTISTS (FOR PATIENT/STUDENT DISCOVERY) ---------- */
+router.get('/search/dentists', async (req, res) => {
+    try {
+        const excludeUid = req.query.exclude as string || '';
+        const queryText = (req.query.q as string || '').toLowerCase();
+
+        const snapshot = await adminDb.collection('users')
+            .where('role', '==', 'dentist')
+            .get();
+
+        let dentists = snapshot.docs
+            .map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    uid: doc.id,
+                    displayName: data.displayName || data.name || 'Dentist',
+                    photoURL: data.photoURL || null,
+                    role: data.role,
+                    specialization: data.specialization || null,
+                    qualification: data.qualification || data.qualifications || null,
+                    experience: data.experience || null,
+                    clinicName: data.clinicName || null,
+                    clinicAddress: data.clinicAddress || null,
+                    consultationFee: data.consultationFee || null,
+                    isVerified: data.isVerified || false,
+                    bio: data.bio || null,
+                };
+            })
+            .filter(d => d.id !== excludeUid); // Exclude self
+
+        // Text search filter
+        if (queryText) {
+            dentists = dentists.filter(d =>
+                (d.displayName || '').toLowerCase().includes(queryText) ||
+                (d.specialization || '').toLowerCase().includes(queryText) ||
+                (d.clinicName || '').toLowerCase().includes(queryText) ||
+                (d.clinicAddress || '').toLowerCase().includes(queryText)
+            );
+        }
+
+        res.json(dentists);
+    } catch (err) {
+        console.error('Search Dentists Error:', err);
+        res.status(500).json({ error: 'Failed to search dentists' });
+    }
+})
+
 /* ---------- GET ALL USERS (FOR SEARCH/SHARE) ---------- */
 router.get('/', async (req, res) => {
     try {
@@ -27,6 +75,44 @@ router.get('/', async (req, res) => {
     } catch (err) {
         console.error('Fetch All Users Error:', err)
         res.status(500).json({ error: 'Failed to fetch users' })
+    }
+})
+
+/* ---------- GET USER PROFILE BY UID ---------- */
+router.get('/profile/:uid', async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const docSnap = await adminDb.collection('users').doc(uid).get();
+
+        if (!docSnap.exists) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const data = docSnap.data()!;
+        res.json({
+            id: docSnap.id,
+            uid: docSnap.id,
+            displayName: data.displayName || data.name || 'User',
+            photoURL: data.photoURL || null,
+            coverPhoto: data.coverPhoto || null,
+            role: data.role || 'patient',
+            bio: data.bio || null,
+            about: data.about || null,
+            specialization: data.specialization || null,
+            qualification: data.qualification || data.qualifications || null,
+            experience: data.experience || null,
+            clinicName: data.clinicName || null,
+            clinicAddress: data.clinicAddress || null,
+            consultationFee: data.consultationFee || null,
+            collegeName: data.collegeName || null,
+            yearOfStudy: data.yearOfStudy || null,
+            isVerified: data.isVerified || false,
+            followers: Array.isArray(data.followers) ? data.followers.length : 0,
+            following: Array.isArray(data.following) ? data.following.length : 0,
+        });
+    } catch (err) {
+        console.error('Fetch User Profile Error:', err);
+        res.status(500).json({ error: 'Failed to fetch user profile' });
     }
 })
 

@@ -153,10 +153,12 @@ export default function MessagesListScreen() {
             className="flex-row items-center p-4 bg-white border-b border-gray-100"
             onPress={() => router.push({ pathname: '/messages/[id]', params: { id: item.id, name: item.name } })}
         >
-            <Image
-                source={{ uri: `https://ui-avatars.com/api/?name=${item.name}&background=random&color=fff` }}
-                className="w-12 h-12 rounded-full bg-gray-200"
-            />
+            <TouchableOpacity onPress={() => router.push({ pathname: '/profile/[id]', params: { id: item.id } })}>
+                <Image
+                    source={{ uri: `https://ui-avatars.com/api/?name=${item.name}&background=random&color=fff` }}
+                    className="w-12 h-12 rounded-full bg-gray-200"
+                />
+            </TouchableOpacity>
             <View className="flex-1 ml-4">
                 <View className="flex-row justify-between items-baseline mb-1">
                     <Text className="font-bold text-gray-900 text-base">{item.name}</Text>

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../lib/apiClient';
+import { useRouter } from 'expo-router';
 // @ts-ignore
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -21,6 +22,7 @@ interface PostCardProps {
 
 export default function PostCard({ post, onLike, onComment, onPress }: PostCardProps) {
     const { user } = useAuth();
+    const router = useRouter();
     const [liked, setLiked] = useState(post.liked || (post.likedBy && user?.uid && post.likedBy.includes(user.uid)) || false);
     const [likesCount, setLikesCount] = useState<number>(post.likes || 0);
 
@@ -38,6 +40,13 @@ export default function PostCard({ post, onLike, onComment, onPress }: PostCardP
             console.error('Failed to like post', error);
             setLiked(!isLiked);
             setLikesCount((prev: number) => !isLiked ? prev + 1 : prev - 1);
+        }
+    };
+
+    const openAuthorProfile = () => {
+        const authorId = post.authorId || post.userId;
+        if (authorId && authorId !== user?.uid) {
+            router.push({ pathname: '/profile/[id]', params: { id: authorId } });
         }
     };
 
@@ -79,15 +88,19 @@ export default function PostCard({ post, onLike, onComment, onPress }: PostCardP
                 style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '50%' }}
             />
 
-            {/* Top Header Pill */}
-            <View className="absolute top-4 left-4 z-10 flex-row items-center bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-md">
+            {/* Top Header Pill - Tappable */}
+            <TouchableOpacity
+                onPress={openAuthorProfile}
+                activeOpacity={0.7}
+                className="absolute top-4 left-4 z-10 flex-row items-center bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-md"
+            >
                 <Image
                     source={{ uri: post.authorPhoto || `https://ui-avatars.com/api/?name=${post.author}&background=random` }}
                     className="w-6 h-6 rounded-full bg-gray-200 border border-white/50"
                 />
                 <Text className="text-white font-bold text-xs ml-2 mr-1">{post.author}</Text>
                 {post.authorVerified && <Ionicons name="checkmark-circle" size={12} color="#60A5FA" />}
-            </View>
+            </TouchableOpacity>
 
             {/* Bottom Content Container */}
             <View className="absolute bottom-0 left-0 right-0 p-5 pb-6 z-10">
