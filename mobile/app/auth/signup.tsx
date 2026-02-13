@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 export default function SignupScreen() {
   const { register } = useAuth();
+  const router = useRouter(); // Add this
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,6 +43,7 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       await register(email, password, 'patient', { displayName: name });
+      router.replace('/onboarding');
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message);
     } finally {

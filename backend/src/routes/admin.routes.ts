@@ -3,6 +3,25 @@ import { adminAuth, adminDb } from '../lib/firebaseAdmin';
 
 const router = Router();
 
+// GET /admin/users/pending - List all unverified users
+router.get('/users/pending', async (req, res) => {
+    try {
+        const snapshot = await adminDb.collection('users')
+            .where('isVerified', '==', false)
+            .get();
+
+        const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Filter out patients if they are auto-verified, but if isVerified is false they should show up.
+        // Also optional: filter by role if needed.
+
+        res.json(users);
+    } catch (error: any) {
+        console.error("Error fetching pending users:", error);
+        res.status(500).json({ error: "Failed to fetch pending users" });
+    }
+});
+
 // DELETE /admin/users/:uid - Permanently delete a user from Auth and Firestore
 router.delete('/users/:uid', async (req, res) => {
     const { uid } = req.params;

@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
-import { useRouter, useSegments } from 'expo-router';
 import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
@@ -33,6 +32,7 @@ export type User = {
     about?: string;
     experience?: string;
     qualifications?: string;
+    qualification?: string; // Legacy/Alternate
     clinicAddress?: string;
     address?: string;
     collegeName?: string;
@@ -74,8 +74,8 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
-    const segments = useSegments();
+    // const router = useRouter(); // REMOVED: Cannot use inside non-child provider
+    // const segments = useSegments(); // REMOVED
     const isRegisteringRef = useRef(false);
 
     useEffect(() => {
@@ -107,10 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         } else {
                             // User deleted from Firestore - Force Logout if not registering
                             if (!isRegisteringRef.current) {
-                                console.warn("User document not found in Firestore. Logging out.");
+                                console.warn("User document not found in Firestore.");
                                 setUser(null);
                                 signOut(auth).catch(err => console.error("Force logout error", err));
-                                router.replace('/');
+                                // router.replace('/'); // UI should handle redirect on null user
                             } else {
                                 // Fallback for new registration (doc might not be created yet)
                                 setUser({
@@ -181,15 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     throw new Error(`Invalid role. This account is registered as a ${userData.role}.`);
                 }
 
-                // Redirect based on onboarding status
-                if (userData.isOnboarded) {
-                    // Default redirect for mobile - likely to the main tabs
-                    router.replace('/(tabs)/study');
-                } else {
-                    router.replace('/onboarding');
-                }
-            } else {
-                router.replace('/onboarding');
+                // Allow component to handle redirect using router
             }
         } catch (error) {
             console.error("Login error:", error);
@@ -232,7 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Force refresh user to minimal state before redirect
             setUser(userData as User);
 
-            router.replace('/onboarding');
+            // Allow component to handle redirect
         } catch (error) {
             console.error("Registration error:", error);
             throw error;
@@ -241,53 +233,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const loginWithGoogle = async (role?: UserRole) => {
-        // NOTE: For Expo Go, we use a specific flow. For production, we need GoogleService-Info.plist
-        // Since we are checking user existence, we'll assume the UI handles the actual prompt 
-        // and passes the credential or we handle it here if using useAuthRequest hook in the component.
+    // ...
 
-        // However, to keep Context clean, usually we trigger the prompt in the UI component 
-        // and pass the result here, OR we use the request loaded here.
-        // For simplicity in this `tool` based edit without seeing the UI component's hook state:
+
+    const loginWithGoogle = async (role?: UserRole) => {
+        // Placeholder: UI handles prompt
         console.warn("Google Login helper called. Ensure prompt is triggered from UI.");
     };
 
-    // We will actually implement the logic that handles the *result* of a social login
-    // The UI (LoginScreen) will handle the `promptAsync` from `expo-auth-session`.
-    // This function will take the *credential* or *user* and process the database/role check.
-
     const handleSocialLoginSuccess = async (firebaseUser: FirebaseUser, role?: UserRole) => {
-        try {
-            const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                if (userData.isOnboarded) {
-                    router.replace('/feed');
-                } else {
-                    router.replace('/onboarding');
-                }
-            } else {
-                // New User -> Redirect to Role Selection (Registration Protection)
-                // We don't create the doc yet, we let them select role first.
-                // But wait, Firebase Auth is already created.
-                // We should route to a "Finish Profile" screen.
-                router.replace('/auth/role-selection');
-            }
-        } catch (error) {
-            console.error("Social login handler error", error);
-        }
+        // Logic handled by component observing user state change
     };
 
     const loginWithApple = async () => {
-        // Logic similar to Google, handled via AppleAuthentication in UI
+        // Placeholder: UI handles prompt
     };
+
+    // ...
 
     const logout = async () => {
         try {
             await signOut(auth);
             setUser(null);
-            router.replace('/');
+            // router.replace('/'); // handled by component
         } catch (error) {
             console.error("Logout error:", error);
         }

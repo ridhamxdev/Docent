@@ -1,22 +1,29 @@
 
 import { Router } from 'express'
-import { getUserByName, getAllUsers, toggleFollow } from '../services/dynamo.service'
+import { getUserByName, toggleFollow } from '../services/dynamo.service'
+import { adminDb } from '../lib/firebaseAdmin'
 
 const router = Router()
 
 /* ---------- GET ALL USERS (FOR SEARCH/SHARE) ---------- */
 router.get('/', async (req, res) => {
     try {
-        const users = await getAllUsers()
-        // Map to safe user objects
-        const safeUsers = users.map(user => ({
-            id: user.id,
-            name: user.name,
-            role: user.role,
-            photoURL: user.photoURL,
-            avatar: user.photoURL
-        }))
-        res.json(safeUsers)
+        // Fetch from Firestore (Source of Truth for Auth/Profiles)
+        const snapshot = await adminDb.collection('users').get();
+
+        const users = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.displayName || data.name || 'User', // Fallback
+                role: data.role,
+                photoURL: data.photoURL,
+                avatar: data.photoURL,
+                isVerified: data.isVerified
+            };
+        });
+
+        res.json(users)
     } catch (err) {
         console.error('Fetch All Users Error:', err)
         res.status(500).json({ error: 'Failed to fetch users' })

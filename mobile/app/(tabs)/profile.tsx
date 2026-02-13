@@ -145,11 +145,17 @@ export default function ProfileScreen() {
                                 <>
                                     <View className="flex-row justify-between border-b border-gray-100 pb-2">
                                         <Text className="font-bold text-gray-500">Qualification</Text>
-                                        <Text className="text-gray-900">{user?.qualifications || '-'}</Text>
+                                        <Text className="text-gray-900">
+                                            {typeof user?.qualification === 'string' ? user.qualification :
+                                                typeof user?.qualifications === 'string' ? user.qualifications : '-'}
+                                        </Text>
                                     </View>
                                     <View className="flex-row justify-between border-b border-gray-100 pb-2">
                                         <Text className="font-bold text-gray-500">Practice</Text>
-                                        <Text className="text-gray-900">{user?.practiceType || '-'}</Text>
+                                        <Text className="text-gray-900">
+                                            {typeof user?.clinicAddress === 'string' ? user.clinicAddress :
+                                                typeof user?.practiceType === 'string' ? user.practiceType : '-'}
+                                        </Text>
                                     </View>
                                 </>
                             )}

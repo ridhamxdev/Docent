@@ -9,7 +9,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 // Standard vertical aspect ratio (4:5) is 1.25
-const CARD_HEIGHT = width * 1.25;
+// const CARD_HEIGHT = width * 1.25;
+const CARD_HEIGHT = width; // Square aspect ratio to reduce length as requested
 
 interface PostCardProps {
     post: any;

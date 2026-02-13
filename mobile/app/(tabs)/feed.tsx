@@ -96,13 +96,15 @@ export default function FeedScreen() {
                 className="bg-gray-50"
             />
 
-            {/* FAB */}
-            <TouchableOpacity
-                className="absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full items-center justify-center shadow-lg shadow-blue-600/40"
-                onPress={() => setModalVisible(true)}
-            >
-                <Ionicons name="add" size={32} color="white" />
-            </TouchableOpacity>
+            {/* FAB - Only for non-patients */}
+            {user?.role !== 'patient' && (
+                <TouchableOpacity
+                    className="absolute bottom-6 right-6 bg-blue-600 w-14 h-14 rounded-full items-center justify-center shadow-lg shadow-blue-600/40"
+                    onPress={() => setModalVisible(true)}
+                >
+                    <Ionicons name="add" size={32} color="white" />
+                </TouchableOpacity>
+            )}
 
             <PostModal
                 visible={modalVisible}

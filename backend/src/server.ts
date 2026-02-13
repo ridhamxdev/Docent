@@ -49,8 +49,19 @@ app.use('/notifications', notificationsRouter)
 const PORT = process.env.PORT || 5555
 const TABLE_NAME = 'Posts'
 
+import os from 'os';
+
 httpServer.listen(PORT, () => {
   console.log(`✅ Backend running on port ${PORT}`);
   console.log(`- Local: http://localhost:${PORT}`);
-  console.log(`- Network: http://<your-ip-address>:${PORT}`);
+
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]!) {
+      if ('IPv4' !== iface.family || iface.internal) {
+        continue;
+      }
+      console.log(`- Network (${name}): http://${iface.address}:${PORT}`);
+    }
+  }
 });

@@ -10,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, FontAwesome } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const router = useRouter(); // Add this
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,6 +35,27 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email, password);
+      // Navigate to Feed on success (Splash/Index will handle onboarding checks if needed, but direct is faster)
+      // Since we don't have user object here immediately, we can assume success = go to feed
+      // Or safer: go to '/' which checks auth state
+      // router.replace('/(tabs)/feed'); 
+      // BETTER: Go to splash equivalent or Check Onboarding? 
+      // Let's go to Feed, failing which the Layout guard (if any) or Feed itself handles it.
+      // But we have separate Onboarding.
+      // Let's use router.replace('/') to let Index decide? No, Index is a screen.
+      // Let's hardcode feed for now, most users are onboarded.
+      // Actually, we can check basic auth state?
+      // Check: 'if (response) ...' - login returns void.
+
+      // router.replace('/(tabs)/feed'); 
+      // To be safe and determining onboarding:
+      // We can't easily check onboarding here without waiting for context update.
+      // Temporary: Go to Feed. New users might hit feed then redirect?
+      // Or Go to '/onboarding' and let it redirect to feed if done?
+      // Let's go to '/(tabs)/feed'.
+
+      router.replace('/(tabs)/feed');
+
     } catch (error: any) {
       Alert.alert('Login Failed', error.message);
     } finally {

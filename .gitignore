@@ -12,7 +12,7 @@ jspm_packages/
 # Next.js
 .next/
 out/
-
+patches/
 # Production
 build/
 dist/

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Image, Text } from 'react-native';
 import Animated, {
     useSharedValue,
@@ -11,9 +11,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useAuth } from '../context/AuthContext';
 
 export default function SplashScreen() {
     const router = useRouter();
+    const { user, loading } = useAuth();
+    const [animationFinished, setAnimationFinished] = useState(false);
+
+    // Animation Interp Check
     const scale = useSharedValue(0);
     const opacity = useSharedValue(0);
     const textOpacity = useSharedValue(0);
@@ -29,13 +34,28 @@ export default function SplashScreen() {
         // Text Animation (delayed)
         textOpacity.value = withDelay(800, withTiming(1, { duration: 800 }));
 
-        // Navigation after animation
+        // Mark animation as finished after 2.5s
         const timeout = setTimeout(() => {
-            router.replace('/welcome');
+            setAnimationFinished(true);
         }, 2500);
 
         return () => clearTimeout(timeout);
     }, []);
+
+    // Effect to handle navigation once both loading is done AND animation is finished
+    useEffect(() => {
+        if (!loading && animationFinished) {
+            if (user) {
+                if (user.isOnboarded) {
+                    router.replace('/(tabs)/feed');
+                } else {
+                    router.replace('/onboarding');
+                }
+            } else {
+                router.replace('/welcome');
+            }
+        }
+    }, [loading, animationFinished, user]);
 
     const logoStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],

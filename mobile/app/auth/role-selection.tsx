@@ -13,28 +13,34 @@ export default function RoleSelectionScreen() {
 
     const handleSelectRole = async (role: 'dentist' | 'student' | 'patient') => {
         if (!auth.currentUser) return;
-        setLoading(true);
 
-        try {
-            const userData = {
-                uid: auth.currentUser.uid,
-                email: auth.currentUser.email,
-                displayName: auth.currentUser.displayName,
-                photoURL: auth.currentUser.photoURL,
-                role: role,
-                isVerified: role !== 'dentist', // Doctors pending verification
-                isOnboarded: false,
-                createdAt: new Date().toISOString()
-            };
+        if (role === 'patient') {
+            // Patients don't need verification, create account immediately
+            setLoading(true);
+            try {
+                const userData = {
+                    uid: auth.currentUser.uid,
+                    email: auth.currentUser.email,
+                    displayName: auth.currentUser.displayName,
+                    photoURL: auth.currentUser.photoURL,
+                    role: role,
+                    isVerified: true, // Patients are auto-verified (or don't need it)
+                    isOnboarded: false,
+                    createdAt: new Date().toISOString()
+                };
 
-            await setDoc(doc(db, "users", auth.currentUser.uid), userData);
-
-            // Navigate to onboarding to complete specific details
-            router.replace('/onboarding');
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
+                await setDoc(doc(db, "users", auth.currentUser.uid), userData);
+                router.replace('/onboarding');
+            } catch (error) {
+                console.error(error);
+                setLoading(false);
+            }
+        } else {
+            // Doctors and Students need to complete profile
+            router.push({
+                pathname: '/auth/complete-profile',
+                params: { role }
+            });
         }
     };
 

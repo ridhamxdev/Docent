@@ -91,7 +91,7 @@ export default function EditProfileModal({ visible, user, onClose, onSuccess }: 
                     {/* Image Management Section */}
                     <View className="mb-8">
                         {/* Cover Photo Customization */}
-                        <TouchableOpacity onPress={() => pickImage('cover')} className="h-32 round-t-xl bg-slate-900 rounded-xl overflow-hidden mb-[-40px] relative items-center justify-center">
+                        <TouchableOpacity onPress={() => pickImage('cover')} className="h-32 rounded-t-xl bg-slate-900 rounded-xl overflow-hidden mb-[-40px] relative items-center justify-center">
                             {formData.coverPhoto ? (
                                 <Image source={{ uri: formData.coverPhoto }} className="w-full h-full opacity-80" resizeMode="cover" />
                             ) : (

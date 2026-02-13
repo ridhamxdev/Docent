@@ -3,7 +3,8 @@ import { io, Socket } from 'socket.io-client';
 
 // Use same URL as apiClient but ensure no path unless socket.io is mounted there
 // Removing '/api' if present, though usually socket.io mounts on root
-const SOCKET_URL = 'http://localhost:5555'; // Using hardcoded for now or env
+// Use EXPO_PUBLIC_API_URL from env, fallback to localhost
+const SOCKET_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5555';
 
 let socket: Socket | null = null;
 
@@ -14,7 +15,7 @@ export const initSocket = (userId: string) => {
         transports: ['websocket'], // Force WebSocket
     });
 
-    socket.on('connect', () => {    
+    socket.on('connect', () => {
         console.log('Socket connected:', socket?.id);
         socket?.emit('join', userId);
     });
