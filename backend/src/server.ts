@@ -19,6 +19,7 @@ import adminRouter from './routes/admin.routes'
 import notificationsRouter from './routes/notifications.routes'
 import meetingsRouter from './routes/meetings.routes'
 import permissionsRouter from './routes/permissions.routes'
+import aiRouter from './routes/ai.routes'
 
 import path from 'path'
 
@@ -49,6 +50,7 @@ app.use('/admin', adminRouter)
 app.use('/notifications', notificationsRouter)
 app.use('/meetings', meetingsRouter)
 app.use('/permissions', permissionsRouter)
+app.use('/ai', aiRouter)
 
 const PORT = process.env.PORT || 5555
 const TABLE_NAME = 'Posts'

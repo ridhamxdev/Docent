@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { createMessage, getMessages, createAppointment, getAppointments } from '../services/dynamo.service'
+import { createMessage, getMessages, createAppointment, getAppointments, updateMessage } from '../services/dynamo.service'
 import { notifyUser } from '../socket'
 
 const router = Router()
@@ -43,7 +43,7 @@ router.get('/:userId', async (req, res) => {
 /* ---------- SEND MESSAGE ---------- */
 router.post('/', async (req, res) => {
     try {
-        const { senderId, receiverId, content, attachmentUrl, attachmentType, senderName } = req.body
+        const { senderId, receiverId, content, attachmentUrl, attachmentType, senderName, metadata } = req.body
 
         const message = await createMessage({
             senderId,
@@ -52,13 +52,25 @@ router.post('/', async (req, res) => {
             content,
             attachmentUrl,
             attachmentType,
+            metadata, // Pass metadata for permission requests, meeting requests, etc.
             read: false
         })
 
-        // Emit Real-Time Event
+        console.log('📨 New message created:', {
+            id: message.id,
+            from: senderId,
+            to: receiverId,
+            hasMetadata: !!metadata,
+            metadataType: metadata?.type
+        });
+
+        // Emit Real-Time Event to receiver
         notifyUser(receiverId, 'newMessage', message);
-        // Optionally notify sender too for multi-device sync
-        // notifyUser(senderId, 'newMessage', message);
+        console.log('🔔 Emitted to receiver:', receiverId);
+
+        // Also emit to sender for multi-device sync
+        notifyUser(senderId, 'newMessage', message);
+        console.log('🔔 Emitted to sender:', senderId);
 
         res.json(message)
     } catch (err) {
@@ -66,5 +78,43 @@ router.post('/', async (req, res) => {
         res.status(500).json({ error: 'Failed to send message' })
     }
 })
+
+/* ---------- MARK MESSAGES AS READ ---------- */
+router.put('/mark-read/:conversationPartnerId', async (req, res) => {
+    try {
+        const { conversationPartnerId } = req.params;
+        const { userId } = req.body; // Current user who is marking as read
+
+        if (!userId) {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
+        // Get all messages between the two users
+        const messages = await getMessages(userId);
+
+        // Filter messages from the conversation partner that are unread
+        const unreadMessages = messages.filter(
+            (msg: any) => msg.senderId === conversationPartnerId && !msg.read
+        );
+
+        console.log(`📖 Marking ${unreadMessages.length} messages as read`);
+
+        // Actually update each message in the database
+        for (const msg of unreadMessages) {
+            await updateMessage(msg.id, { read: true });
+        }
+
+        // Emit socket event to notify conversation partner
+        notifyUser(conversationPartnerId, 'messagesRead', {
+            userId,
+            count: unreadMessages.length
+        });
+
+        res.json({ success: true, count: unreadMessages.length });
+    } catch (err) {
+        console.error('Mark as read error:', err);
+        res.status(500).json({ error: 'Failed to mark messages as read' });
+    }
+});
 
 export default router

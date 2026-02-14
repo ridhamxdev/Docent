@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import PostCard from "../../components/PostCard";
 import PostModal from "../../components/PostModal";
+import AIXrayModal from "../../components/AIXrayModal";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FeedScreen() {
@@ -16,6 +17,7 @@ export default function FeedScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [aiModalVisible, setAiModalVisible] = useState(false);
 
     const fetchPosts = useCallback(async () => {
         try {
@@ -61,9 +63,15 @@ export default function FeedScreen() {
                 </View>
 
                 <View className="flex-row gap-3">
-                    <TouchableOpacity className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center">
-                        <Ionicons name="search-outline" size={22} color="black" />
-                    </TouchableOpacity>
+                    {/* AI X-ray Analysis - Only for Dentists and Dental Students */}
+                    {(user?.role === 'dentist' || user?.role === 'student') && (
+                        <TouchableOpacity
+                            onPress={() => setAiModalVisible(true)}
+                            className="w-10 h-10 bg-blue-50 rounded-full items-center justify-center"
+                        >
+                            <Ionicons name="sparkles" size={22} color="#2563eb" />
+                        </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                         onPress={() => router.push('/messages')}
                         className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center"
@@ -110,6 +118,11 @@ export default function FeedScreen() {
                 visible={modalVisible}
                 onClose={() => setModalVisible(false)}
                 onPostSuccess={onRefresh}
+            />
+
+            <AIXrayModal
+                visible={aiModalVisible}
+                onClose={() => setAiModalVisible(false)}
             />
         </SafeAreaView>
     );

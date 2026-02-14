@@ -20,7 +20,7 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
 
             const permission = await checkUploadPermission(patientId, dentistId);
             if (!permission) {
-                return res.status(403).json({ error: 'Permission denied. You need approval from the doctor to upload files.' });
+                return res.status(403).json({ error: 'Permission denied. You need approval from the dentist to upload files.' });
             }
 
             // Mark permission as used (strict "every time" rule)

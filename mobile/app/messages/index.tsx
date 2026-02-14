@@ -1,6 +1,6 @@
 import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, TextInput } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { apiClient } from '../../lib/apiClient';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -133,11 +133,31 @@ export default function MessagesListScreen() {
                 });
             });
 
+            // Listen for messagesRead event to clear unread count
+            socket.on('messagesRead', (data: { userId: string }) => {
+                console.log('Messages read by:', data.userId);
+                setConversations(prev => {
+                    const updated = prev.map(c =>
+                        c.id === data.userId ? { ...c, unreadCount: 0 } : c
+                    );
+                    return updated;
+                });
+            });
+
             return () => {
                 socket.off('newMessage');
+                socket.off('messagesRead');
             };
         }
     }, [user?.uid, fetchConversations]);
+
+    // Refresh list when screen gains focus (e.g., returning from a chat)
+    useFocusEffect(
+        useCallback(() => {
+            console.log('Messages list screen focused - refreshing...');
+            fetchConversations();
+        }, [fetchConversations])
+    );
 
     const onRefresh = () => {
         setRefreshing(true);

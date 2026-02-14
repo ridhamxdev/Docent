@@ -140,11 +140,11 @@ export interface VisitSlot {
 export interface Meeting {
   id: string
   patientId: string
-  dentistId: string // The doctor/dentist
+  dentistId: string // The dentist/dentist
   date: string
   time: string
   status: 'pending' | 'approved' | 'rejected' | 'completed'
-  videoUrl?: string // The manual link provided by the doctor
+  videoUrl?: string // The manual link provided by the dentist
   createdAt: number
   type: 'meeting'
 }
@@ -527,6 +527,45 @@ export async function getMessages(userId: string) {
     return []
   }
 }
+
+export async function updateMessage(messageId: string, updates: Partial<Message>) {
+  try {
+    // Build update expression dynamically
+    let updateExpression = 'set';
+    const expressionAttributeNames: any = {};
+    const expressionAttributeValues: any = {};
+
+    let index = 0;
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        updateExpression += ` #key${index} = :val${index},`;
+        expressionAttributeNames[`#key${index}`] = key;
+        expressionAttributeValues[`:val${index}`] = value;
+        index++;
+      }
+    }
+
+    // Remove trailing comma
+    updateExpression = updateExpression.slice(0, -1);
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { id: messageId },
+        UpdateExpression: updateExpression,
+        ExpressionAttributeNames: expressionAttributeNames,
+        ExpressionAttributeValues: expressionAttributeValues,
+        ReturnValues: 'ALL_NEW'
+      })
+    );
+
+    return { success: true, id: messageId };
+  } catch (e) {
+    console.error('Error updating message', e);
+    throw e;
+  }
+}
+
 
 /* ---------- APPOINTMENTS & SLOTS ---------- */
 
@@ -1252,6 +1291,7 @@ export async function updatePermissionRequest(id: string, status: 'approved' | '
 
 export async function checkUploadPermission(patientId: string, dentistId: string) {
   try {
+    console.log(`Checking permission for patient: ${patientId}, dentist: ${dentistId}`);
     const result = await docClient.send(
       new ScanCommand({
         TableName: TABLE_NAME,
@@ -1264,11 +1304,11 @@ export async function checkUploadPermission(patientId: string, dentistId: string
           ':status': 'approved'
         }
       })
-    )
+    );
     // Return the first approved request if any
-    return (result.Items && result.Items.length > 0) ? result.Items[0] : null
+    return (result.Items && result.Items.length > 0) ? result.Items[0] : null;
   } catch (e) {
-    console.error('Error checking permission', e)
-    return null
+    console.error('Error checking permission', e);
+    return null;
   }
 }

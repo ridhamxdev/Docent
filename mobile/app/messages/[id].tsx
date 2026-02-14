@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { apiClient } from '../../lib/apiClient';
@@ -8,10 +8,13 @@ import AppointmentRequestModal from '../../components/appointments/AppointmentRe
 import MeetingRequestModal from '../../components/meetings/MeetingRequestModal';
 import VideoLinkModal from '../../components/meetings/VideoLinkModal';
 import PermissionRequestModal from '../../components/meetings/PermissionRequestModal';
+import ImageViewerModal from '../../components/ImageViewerModal';
 import { initSocket } from '../../lib/socket';
 import * as Linking from 'expo-linking';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
 interface Message {
@@ -28,8 +31,24 @@ interface Message {
 
 export default function ChatScreen() {
     const { id, name } = useLocalSearchParams<{ id: string, name: string }>();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
     const router = useRouter();
+
+    if (loading) {
+        return (
+            <View className="flex-1 justify-center items-center bg-white">
+                <ActivityIndicator size="large" color="#2563EB" />
+            </View>
+        );
+    }
+
+    if (!user) {
+        return (
+            <View className="flex-1 justify-center items-center bg-white">
+                <Text>Please log in to view messages.</Text>
+            </View>
+        );
+    }
 
     const [messages, setMessages] = useState<Message[]>([]);
     const [text, setText] = useState('');
@@ -38,6 +57,8 @@ export default function ChatScreen() {
     const [showMeetingRequest, setShowMeetingRequest] = useState(false);
     const [showVideoLink, setShowVideoLink] = useState(false);
     const [showPermissionRequest, setShowPermissionRequest] = useState(false);
+    const [viewerImageUrl, setViewerImageUrl] = useState<string | null>(null);
+    const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
 
     const flatListRef = useRef<FlatList>(null);
 
@@ -52,8 +73,28 @@ export default function ChatScreen() {
             ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
             setMessages(chatMsgs);
+            console.log("Fetched messages:", chatMsgs.length);
+            chatMsgs.forEach(m => {
+                if (m.metadata) {
+                    console.log("Message metadata:", m.id, m.metadata);
+                }
+            });
+            console.log("User Role:", user?.role);
+
+            // Mark messages as read
+            markAsRead();
         } catch (error) {
             console.error("Fetch chat error", error);
+        }
+    };
+
+    const markAsRead = async () => {
+        if (!user?.uid || !id) return;
+        try {
+            await apiClient.put(`/messages/mark-read/${id}`, { userId: user.uid });
+            console.log('📖 Marked messages as read');
+        } catch (error) {
+            console.error('Mark as read error:', error);
         }
     };
 
@@ -103,6 +144,17 @@ export default function ChatScreen() {
         const content = text.trim();
         setText('');
         setSending(true);
+
+        // Optimistic update
+        const optimisticMsg: Message = {
+            id: Date.now().toString(),
+            senderId: user.uid,
+            receiverId: id,
+            content: content,
+            createdAt: Date.now(),
+            senderName: user.displayName || 'Me'
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
 
         try {
             await apiClient.post('/messages', {
@@ -164,13 +216,37 @@ export default function ChatScreen() {
         }
     };
 
+    const downloadFile = async (fileUrl: string, messageId: string) => {
+        setDownloadingFileId(messageId);
+        try {
+            const filename = 'file_' + Date.now() + '.pdf';
+            const fileUri = (FileSystem as any).cacheDirectory + filename;
+
+            // Download the file
+            const downloadResult = await (FileSystem as any).downloadAsync(fileUrl, fileUri);
+
+            // Check if sharing is available
+            const isAvailable = await Sharing.isAvailableAsync();
+            if (isAvailable) {
+                await Sharing.shareAsync(downloadResult.uri);
+            } else {
+                Alert.alert('Success', 'File downloaded successfully!');
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+            Alert.alert('Error', 'Failed to download file');
+        } finally {
+            setDownloadingFileId(null);
+        }
+    };
+
     const handleUpload = async (file: any, type: 'image' | 'file') => {
         // file object from pickers usually has uri, type, name (or fileName)
         const canUpload = await checkUploadPermission();
         if (!canUpload) {
             Alert.alert(
                 "Permission Required",
-                "You need permission from the doctor to upload files.",
+                "You need permission from the dentist to upload files.",
                 [
                     { text: "Cancel", style: "cancel" },
                     { text: "Request Permission", onPress: () => setShowPermissionRequest(true) }
@@ -292,7 +368,7 @@ export default function ChatScreen() {
                                     </TouchableOpacity>
                                 </>
                             )}
-                            {user?.role === 'dentist' && (
+                            {(user?.role === 'dentist' || (user?.role as string) === 'doctor') && (
                                 <TouchableOpacity onPress={() => setShowVideoLink(true)}>
                                     <Ionicons name="videocam-outline" size={24} color="#2563EB" />
                                 </TouchableOpacity>
@@ -310,76 +386,179 @@ export default function ChatScreen() {
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 renderItem={({ item }) => {
                     const isMe = item.senderId === user?.uid;
-                    const isSystem = item.senderId === 'system'; // If we use system messages
-
-                    // Specific rendering for call links
+                    const isSystem = item.senderId === 'system';
                     const isVideoCall = item.content.startsWith('🎥 Video Call Started:');
                     const videoUrl = isVideoCall ? item.content.split(': ')[1] : null;
+                    const isPermissionRequest = item.metadata?.type === 'permission_request';
+                    const isMeetingRequest = item.metadata?.type === 'meeting_request';
+                    const hasAttachment = !!item.attachmentUrl;
+
+                    // Special styling for request cards
+                    const isRequestCard = (isPermissionRequest || isMeetingRequest) && !isMe;
 
                     return (
-                        <View className={`flex-row mb-3 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                            {!isMe && (
-                                <View className="w-8 h-8 rounded-full bg-gray-300 mr-2 items-center justify-center">
-                                    <Text className="text-xs font-bold text-gray-600">{(name || '?')[0]}</Text>
+                        <View className={`mb-4 ${isMe ? 'items-end' : 'items-start'}`}>
+                            {/* Avatar for received messages */}
+                            {!isMe && !isRequestCard && (
+                                <View className="flex-row mb-1 ml-2">
+                                    <View className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 items-center justify-center mr-2 shadow-sm">
+                                        <Text className="text-xs font-bold text-white">{(name || '?')[0].toUpperCase()}</Text>
+                                    </View>
+                                    <Text className="text-xs text-gray-500 self-center">{name}</Text>
                                 </View>
                             )}
-                            <View
-                                className={`px-4 py-3 rounded-2xl max-w-[75%] ${isVideoCall ? 'bg-green-100 border border-green-300' :
-                                    isMe ? 'bg-blue-600 rounded-br-none' : 'bg-white border border-gray-200 rounded-bl-none'
-                                    }`}
-                            >
-                                <Text className={`text-base ${isVideoCall ? 'text-green-800 font-bold' : isMe ? 'text-white' : 'text-gray-800'}`}>
-                                    {isVideoCall ? '🎥 Video Call Started' : item.content}
-                                </Text>
-                                {isVideoCall && videoUrl && (
-                                    <TouchableOpacity
-                                        className="mt-2 bg-green-600 px-4 py-2 rounded-lg"
-                                        onPress={() => Linking.openURL(videoUrl)}
-                                    >
-                                        <Text className="text-white font-bold text-center">Join Call</Text>
-                                    </TouchableOpacity>
-                                )}
 
-                                {/* Meeting Request Actions (Doctor Only) */}
-                                {item.metadata?.type === 'meeting_request' && user?.role === 'dentist' && !isMe && (
-                                    <View className="flex-row mt-2 space-x-2 gap-2">
-                                        <TouchableOpacity
-                                            className="bg-green-500 px-3 py-2 rounded-lg flex-1"
-                                            onPress={() => handleMeetingResponse(item.metadata.meetingId, 'approved')}
-                                        >
-                                            <Text className="text-white text-center font-bold">Approve</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            className="bg-red-500 px-3 py-2 rounded-lg flex-1"
-                                            onPress={() => handleMeetingResponse(item.metadata.meetingId, 'rejected')}
-                                        >
-                                            <Text className="text-white text-center font-bold">Reject</Text>
-                                        </TouchableOpacity>
+                            {/* Permission Request Card */}
+                            {isPermissionRequest && (user?.role === 'dentist' || (user?.role as string) === 'doctor') && !isMe ? (
+                                <View className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-4 border-l-4 border-orange-500 shadow-md max-w-[85%] mx-2">
+                                    <View className="flex-row items-center mb-3">
+                                        <View className="w-10 h-10 bg-orange-500 rounded-full items-center justify-center mr-3">
+                                            <Ionicons name="lock-open" size={20} color="white" />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-bold text-orange-900">Permission Request</Text>
+                                            <Text className="text-xs text-orange-700">{name} needs your approval</Text>
+                                        </View>
                                     </View>
-                                )}
 
-                                {/* Permission Request Actions (Doctor Only) */}
-                                {item.metadata?.type === 'permission_request' && user?.role === 'dentist' && !isMe && (
-                                    <View className="flex-row mt-2 space-x-2 gap-2">
+                                    <View className="bg-white/60 rounded-lg p-3 mb-3">
+                                        <Text className="text-gray-800 text-sm">{item.content}</Text>
+                                    </View>
+
+                                    <View className="flex-row gap-3">
                                         <TouchableOpacity
-                                            className="bg-green-500 px-3 py-2 rounded-lg flex-1"
+                                            className="flex-1 bg-green-500 rounded-xl py-3 flex-row items-center justify-center shadow-sm active:scale-95"
                                             onPress={() => handlePermissionResponse(item.metadata.permissionId, 'approved')}
                                         >
-                                            <Text className="text-white text-center font-bold">Allow</Text>
+                                            <Ionicons name="checkmark-circle" size={18} color="white" />
+                                            <Text className="text-white font-bold ml-2">Allow</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
-                                            className="bg-red-500 px-3 py-2 rounded-lg flex-1"
+                                            className="flex-1 bg-red-500 rounded-xl py-3 flex-row items-center justify-center shadow-sm active:scale-95"
                                             onPress={() => handlePermissionResponse(item.metadata.permissionId, 'rejected')}
                                         >
-                                            <Text className="text-white text-center font-bold">Deny</Text>
+                                            <Ionicons name="close-circle" size={18} color="white" />
+                                            <Text className="text-white font-bold ml-2">Deny</Text>
                                         </TouchableOpacity>
                                     </View>
-                                )}
 
-                                <Text className={`text-[10px] mt-1 text-right ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
-                                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </Text>
-                            </View>
+                                    <Text className="text-[10px] text-orange-600 mt-2 text-right">
+                                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </Text>
+                                </View>
+                            ) : isMeetingRequest && (user?.role === 'dentist' || (user?.role as string) === 'doctor') && !isMe ? (
+                                /* Meeting Request Card */
+                                <View className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border-l-4 border-blue-500 shadow-md max-w-[85%] mx-2">
+                                    <View className="flex-row items-center mb-3">
+                                        <View className="w-10 h-10 bg-blue-500 rounded-full items-center justify-center mr-3">
+                                            <Ionicons name="calendar" size={20} color="white" />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-bold text-blue-900">Meeting Request</Text>
+                                            <Text className="text-xs text-blue-700">{name} wants to schedule</Text>
+                                        </View>
+                                    </View>
+
+                                    <View className="bg-white/60 rounded-lg p-3 mb-3">
+                                        <Text className="text-gray-800 text-sm">{item.content}</Text>
+                                    </View>
+
+                                    <View className="flex-row gap-3">
+                                        <TouchableOpacity
+                                            className="flex-1 bg-green-500 rounded-xl py-3 flex-row items-center justify-center shadow-sm active:scale-95"
+                                            onPress={() => handleMeetingResponse(item.metadata.meetingId, 'approved')}
+                                        >
+                                            <Ionicons name="checkmark-circle" size={18} color="white" />
+                                            <Text className="text-white font-bold ml-2">Approve</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            className="flex-1 bg-red-500 rounded-xl py-3 flex-row items-center justify-center shadow-sm active:scale-95"
+                                            onPress={() => handleMeetingResponse(item.metadata.meetingId, 'rejected')}
+                                        >
+                                            <Ionicons name="close-circle" size={18} color="white" />
+                                            <Text className="text-white font-bold ml-2">Reject</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <Text className="text-[10px] text-blue-600 mt-2 text-right">
+                                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </Text>
+                                </View>
+                            ) : isVideoCall ? (
+                                /* Video Call Card */
+                                <View className={`bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-300 shadow-md max-w-[85%] ${isMe ? 'mr-2' : 'ml-2'}`}>
+                                    <View className="flex-row items-center mb-3">
+                                        <View className="w-10 h-10 bg-emerald-500 rounded-full items-center justify-center mr-3">
+                                            <Ionicons name="videocam" size={20} color="white" />
+                                        </View>
+                                        <Text className="text-emerald-900 font-bold flex-1">Video Call Started</Text>
+                                    </View>
+
+                                    {videoUrl && (
+                                        <TouchableOpacity
+                                            className="bg-emerald-600 rounded-xl py-3 flex-row items-center justify-center shadow-sm active:scale-95"
+                                            onPress={() => Linking.openURL(videoUrl)}
+                                        >
+                                            <Ionicons name="enter" size={18} color="white" />
+                                            <Text className="text-white font-bold ml-2">Join Call</Text>
+                                        </TouchableOpacity>
+                                    )}
+
+                                    <Text className="text-[10px] text-emerald-600 mt-2 text-right">
+                                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </Text>
+                                </View>
+                            ) : (
+                                /* Regular Message Bubble */
+                                <View className={`px-4 py-3 rounded-2xl max-w-[75%] shadow-sm ${isMe
+                                    ? 'bg-blue-600 rounded-br-md mr-2'
+                                    : 'bg-white border border-gray-200 rounded-bl-md ml-2'
+                                    }`}>
+                                    {/* Attachment Preview */}
+                                    {hasAttachment && (
+                                        <View className="mb-2">
+                                            {item.attachmentType === 'image' ? (
+                                                <TouchableOpacity
+                                                    onPress={() => setViewerImageUrl(item.attachmentUrl || null)}
+                                                    activeOpacity={0.9}
+                                                    className="rounded-lg overflow-hidden bg-gray-100 relative"
+                                                >
+                                                    <Image
+                                                        source={{ uri: item.attachmentUrl }}
+                                                        className="w-full h-48"
+                                                        resizeMode="cover"
+                                                    />
+                                                    <View className="absolute bottom-2 right-2 bg-black/60 rounded-full p-2">
+                                                        <Ionicons name="expand" size={16} color="white" />
+                                                    </View>
+                                                </TouchableOpacity>
+                                            ) : (
+                                                <TouchableOpacity
+                                                    onPress={() => item.attachmentUrl && downloadFile(item.attachmentUrl, item.id)}
+                                                    disabled={downloadingFileId === item.id}
+                                                    className="flex-row items-center bg-gray-100 p-3 rounded-lg active:bg-gray-200"
+                                                >
+                                                    <Ionicons name="document-attach" size={24} color="#6b7280" />
+                                                    <Text className="text-gray-700 ml-2 flex-1" numberOfLines={1}>File attachment</Text>
+                                                    {downloadingFileId === item.id ? (
+                                                        <ActivityIndicator size="small" color="#2563EB" />
+                                                    ) : (
+                                                        <Ionicons name="download" size={20} color="#2563EB" />
+                                                    )}
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
+                                    )}
+
+                                    <Text className={`text-base ${isMe ? 'text-white' : 'text-gray-800'}`}>
+                                        {item.content}
+                                    </Text>
+
+                                    <Text className={`text-[10px] mt-1 text-right ${isMe ? 'text-blue-200' : 'text-gray-400'}`}>
+                                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </Text>
+                                </View>
+                            )}
                         </View>
                     );
                 }}
@@ -417,11 +596,11 @@ export default function ChatScreen() {
                 />
             )}
 
-            {id && (
+            {id && user && (
                 <MeetingRequestModal
                     visible={showMeetingRequest}
                     onClose={() => setShowMeetingRequest(false)}
-                    patientId={user!.uid}
+                    patientId={user.uid}
                     dentistId={id}
                     onSuccess={() => {
                         // Success handled inside modal (message sent)
@@ -429,22 +608,22 @@ export default function ChatScreen() {
                 />
             )}
 
-            {id && (
+            {id && user && (
                 <PermissionRequestModal
                     visible={showPermissionRequest}
                     onClose={() => setShowPermissionRequest(false)}
-                    patientId={user!.uid}
+                    patientId={user.uid}
                     dentistId={id}
                     onSuccess={() => { }}
                 />
             )}
 
-            {id && (
+            {id && user && (
                 <VideoLinkModal
                     visible={showVideoLink} // TODO: Pass meeting ID if we want to link it to a specific meeting. For now, generic or active.
                     // We need a meeting ID to start? The API requires /meetings/:id/start.
                     // So we need to Select a meeting first? Or just start a call ad-hoc?
-                    // The instruction said "for video the doctor can do the video call on the basis of meeting schedule".
+                    // The instruction said "for video the dentist can do the video call on the basis of meeting schedule".
                     // So we should pick a meeting.
                     // For simplicity in this turn, we'll assume there's a "current" meeting or we just send the link as a message without using the /start endpoint if we don't have an ID.
                     // Actually, VideoLinkModal calls /meetings/${meetingId}/start. It needs meetingId.
@@ -462,7 +641,7 @@ export default function ChatScreen() {
                     onClose={() => setShowVideoLink(false)}
                     onSuccess={(url) => {
                         apiClient.post('/messages', {
-                            senderId: user!.uid,
+                            senderId: user.uid,
                             receiverId: id,
                             content: `🎥 Video Call Started: ${url}`,
                             type: 'message'
@@ -470,6 +649,13 @@ export default function ChatScreen() {
                     }}
                 />
             )}
+
+            {/* Image Viewer Modal */}
+            <ImageViewerModal
+                visible={!!viewerImageUrl}
+                imageUrl={viewerImageUrl || ''}
+                onClose={() => setViewerImageUrl(null)}
+            />
         </KeyboardAvoidingView>
     );
 }

@@ -38,6 +38,13 @@ export const getIO = () => {
 
 export const notifyUser = (userId: string, event: string, data: any) => {
     if (io) {
+        console.log(`🔌 Emitting '${event}' to room '${userId}'`);
         io.to(userId).emit(event, data);
+
+        // Log how many clients are in this room
+        const room = io.sockets.adapter.rooms.get(userId);
+        console.log(`📊 Room '${userId}' has ${room?.size || 0} client(s)`);
+    } else {
+        console.error('❌ Socket.io not initialized, cannot notify user');
     }
 };

@@ -9,9 +9,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
-// Standard vertical aspect ratio (4:5) is 1.25
-// const CARD_HEIGHT = width * 1.25;
-const CARD_HEIGHT = width; // Square aspect ratio to reduce length as requested
+// Constrain post height to a reasonable max (not too tall)
+const CARD_HEIGHT = Math.min(width * 0.75, 450); // Max 450px or 75% of screen width
 
 interface PostCardProps {
     post: any;
@@ -125,11 +124,15 @@ export default function PostCard({ post, onLike, onComment, onPress }: PostCardP
 
             {/* Floating Action Button - Like */}
             <TouchableOpacity
-                onPress={handleLike}
+                onPress={(e) => {
+                    e?.stopPropagation?.();
+                    handleLike();
+                }}
+                activeOpacity={0.7}
                 className="absolute bottom-6 right-5 w-14 h-14 rounded-full bg-white items-center justify-center shadow-lg"
-                style={{ elevation: 5 }}
+                style={{ elevation: 5, zIndex: 20 }}
             >
-                <Ionicons name={liked ? "heart" : "heart"} size={28} color={liked ? "#EF4444" : "#E5E7EB"} />
+                <Ionicons name={liked ? "heart" : "heart-outline"} size={28} color={liked ? "#EF4444" : "#6B7280"} />
             </TouchableOpacity>
         </TouchableOpacity>
     );
