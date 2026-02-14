@@ -23,9 +23,10 @@ interface Props {
     userId?: string; // If undefined, fetch for current user
     role?: string;
     setPostCount?: (count: number) => void;
+    refreshTrigger?: number; // Optional trigger to force refresh
 }
 
-export default function UserPostsGrid({ userId, role, setPostCount }: Props) {
+export default function UserPostsGrid({ userId, role, setPostCount, refreshTrigger }: Props) {
     const router = useRouter();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,33 +34,35 @@ export default function UserPostsGrid({ userId, role, setPostCount }: Props) {
     useEffect(() => {
         const fetchPosts = async () => {
             try {
-                // If userId is provided, filter by it. If not, filtered by logged in implicitly (or show all depending on backend API design)
-                // The frontend uses 'author' query param.
-                const query = userId ? `?authorId=${userId}` : '';
-                // Note: Frontend API `/posts` filters by `author` NAME not ID usually, need to check backend.
-                // Assuming we can filter by author ID or we filter client side if needed.
-                // Let's try standard endpoint.
+                console.log('🔄 Fetching user posts - userId:', userId, 'role:', role);
+                // Use the new /posts/user/:userId endpoint
+                if (userId) {
+                    const query = role ? `?role=${role}` : '';
+                    const data = await apiClient.get<Post[]>(`/posts/user/${userId}${query}`);
 
-                const data = await apiClient.get<Post[]>(`/posts${query}`);
-                if (Array.isArray(data)) {
-                    // Filter if needed
-                    const myPosts = userId ? data.filter(p => p.authorId === userId || p.author === userId) : data;
-                    // NOTE: Backend might return all posts if no filter. 
-                    // For 'My Profile', we expect to see MY posts.
-                    // Ideally backend supports /users/:id/posts or /posts?author=...
-
-                    setPosts(myPosts);
-                    if (setPostCount) setPostCount(myPosts.length);
+                    if (Array.isArray(data)) {
+                        console.log('✅ Loaded', data.length, 'posts for user');
+                        setPosts(data);
+                        if (setPostCount) setPostCount(data.length);
+                    }
+                } else {
+                    // Fallback to all posts if no userId
+                    const query = role ? `?role=${role}` : '';
+                    const data = await apiClient.get<Post[]>(`/posts${query}`);
+                    if (Array.isArray(data)) {
+                        setPosts(data);
+                        if (setPostCount) setPostCount(data.length);
+                    }
                 }
             } catch (error) {
-                console.error("Failed to load user posts", error);
+                console.error("❌ Failed to load user posts:", error);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchPosts();
-    }, [userId]);
+    }, [userId, role, refreshTrigger]); // Added refreshTrigger
 
     const renderItem = ({ item }: { item: Post }) => {
         const imageUrl = item.images?.[0] || item.image;

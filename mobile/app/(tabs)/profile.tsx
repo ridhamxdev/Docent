@@ -21,7 +21,7 @@ export default function ProfileScreen() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAddVisit, setShowAddVisit] = useState(false);
     const [refreshSlotTrigger, setRefreshSlotTrigger] = useState(0);
-
+    const [refreshPostsTrigger, setRefreshPostsTrigger] = useState(0); // For refreshing posts
     // Fetch fresh stats
     const fetchStats = async () => {
         try {
@@ -38,6 +38,7 @@ export default function ProfileScreen() {
 
     const handleRefresh = () => {
         setRefreshing(true);
+        setRefreshPostsTrigger(prev => prev + 1); // Trigger posts refresh
         fetchStats();
     };
 
@@ -109,6 +110,7 @@ export default function ProfileScreen() {
                     <UserPostsGrid
                         userId={user?.uid}
                         setPostCount={(count) => setStats(s => ({ ...s, posts: count }))}
+                        refreshTrigger={refreshPostsTrigger}
                     />
                 ) : activeTab === 'visits' ? (
                     <View className="p-4 bg-gray-50 min-h-[400px]">

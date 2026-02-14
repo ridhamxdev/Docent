@@ -21,13 +21,17 @@ export default function FeedScreen() {
 
     const fetchPosts = useCallback(async () => {
         try {
+            console.log('🔄 Fetching posts for role:', user?.role);
             const roleQuery = user?.role ? `?role=${user.role}` : '';
             const data = await apiClient.get(`/posts${roleQuery}`);
             if (Array.isArray(data)) {
-                setPosts(data);
+                // Sort by newest first
+                const sorted = data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                console.log('✅ Fetched', sorted.length, 'posts');
+                setPosts(sorted);
             }
         } catch (error) {
-            console.error("Error fetching posts:", error);
+            console.error("❌ Error fetching posts:", error);
         } finally {
             setLoading(false);
             setRefreshing(false);

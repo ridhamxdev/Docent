@@ -16,6 +16,7 @@ export default function PostModal({ visible, onClose, onPostSuccess }: PostModal
     const [content, setContent] = useState('');
     const [media, setMedia] = useState<ImagePicker.ImagePickerAsset[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isSensitiveContent, setIsSensitiveContent] = useState(false);
 
     const pickMedia = async () => {
         try {
@@ -40,14 +41,20 @@ export default function PostModal({ visible, onClose, onPostSuccess }: PostModal
 
     const handlePost = async () => {
         if (!content.trim() && media.length === 0) return;
+        if (loading) {
+            console.log('⚠️ Post already in progress, ignoring duplicate call');
+            return; // Prevent double submission
+        }
 
         setLoading(true);
         try {
             const formData = new FormData();
             formData.append('content', content);
             formData.append('author', user?.displayName || 'User');
+            formData.append('userId', user?.uid || '');
             formData.append('authorType', 'user');
             formData.append('authorRole', user?.role || 'patient');
+            formData.append('isSensitiveContent', isSensitiveContent.toString());
 
             media.forEach((asset, index) => {
                 const uri = asset.uri;
@@ -64,19 +71,20 @@ export default function PostModal({ visible, onClose, onPostSuccess }: PostModal
                 });
             });
 
-            await apiClient.post('/posts', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                }
-            });
+            // Don't manually set Content-Type - let the system set it with boundary
+            const response = await apiClient.post('/posts', formData);
+            console.log('✅ Post created successfully:', response);
 
             setContent('');
             setMedia([]);
+            setIsSensitiveContent(false);
+
+            console.log('📢 Calling onPostSuccess to refresh feed...');
             onPostSuccess();
             onClose();
 
         } catch (error) {
-            console.error('Post failed', error);
+            console.error('❌ Post failed', error);
             Alert.alert('Error', 'Failed to create post');
         } finally {
             setLoading(false);
@@ -92,9 +100,12 @@ export default function PostModal({ visible, onClose, onPostSuccess }: PostModal
                         <Text className="text-gray-500 text-lg">Cancel</Text>
                     </TouchableOpacity>
                     <Text className="font-bold text-lg">New Post</Text>
-                    <TouchableOpacity onPress={handlePost} disabled={loading || (!content && media.length === 0)}>
-                        <Text className={`font-bold text-lg ${loading || (!content && media.length === 0) ? 'text-gray-300' : 'text-blue-600'}`}>
-                            Post
+                    <TouchableOpacity
+                        onPress={handlePost}
+                        disabled={loading || (!content.trim() && media.length === 0)}
+                    >
+                        <Text className={`font-bold text-lg ${loading || (!content.trim() && media.length === 0) ? 'text-gray-300' : 'text-blue-600'}`}>
+                            {loading ? 'Posting...' : 'Post'}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -134,6 +145,24 @@ export default function PostModal({ visible, onClose, onPostSuccess }: PostModal
                             </View>
                         ))}
                     </View>
+
+                    {/* Sensitive Content Checkbox (Dentists and Students only) */}
+                    {(user?.role === 'dentist' || user?.role === 'student') && (
+                        <TouchableOpacity
+                            onPress={() => setIsSensitiveContent(!isSensitiveContent)}
+                            className="flex-row items-center gap-3 mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200"
+                        >
+                            <Ionicons
+                                name={isSensitiveContent ? "checkbox" : "square-outline"}
+                                size={24}
+                                color={isSensitiveContent ? "#F59E0B" : "#9CA3AF"}
+                            />
+                            <View className="flex-1">
+                                <Text className="text-sm font-medium text-gray-900">Contains sensitive medical content</Text>
+                                <Text className="text-xs text-gray-600">Blood, serious treatment, or graphic medical content</Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
                 </ScrollView>
 
                 {/* Footer Actions */}

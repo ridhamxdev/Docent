@@ -10,7 +10,7 @@ import * as Notifications from 'expo-notifications';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const { isDarkMode, toggleTheme } = useTheme();
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 

@@ -50,6 +50,7 @@ export default function AdminLayout({
         { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Verifications", href: "/admin/verifications", icon: FileCheck },
+        { name: "Feed Management", href: "/admin/feed-management", icon: Newspaper },
         { name: "AI Content", href: "/admin/content", icon: Newspaper },
         { name: "Docent AI", href: "/admin/docent-ai", icon: Settings },
     ];

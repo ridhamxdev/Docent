@@ -85,11 +85,18 @@ export const apiClient = {
         }
     },
 
-    delete: async (endpoint: string) => {
+    delete: async (endpoint: string, body?: any) => {
         try {
-            const res = await fetch(`${API_URL}${endpoint}`, {
+            const options: RequestInit = {
                 method: 'DELETE',
-            });
+            };
+
+            if (body) {
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify(body);
+            }
+
+            const res = await fetch(`${API_URL}${endpoint}`, options);
             if (!res.ok) throw new Error('API Request Failed');
             return res.json();
         } catch (error) {

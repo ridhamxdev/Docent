@@ -3,7 +3,7 @@ import multer from 'multer'
 import { s3Client } from '../aws'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { v4 as uuid } from 'uuid'
-import { createPost, getPosts, deletePost, updatePost, addComment, getPostById, createNotification, getUserByName, toggleLike, getPostLikes, incrementShare } from '../services/dynamo.service'
+import { createPost, getPosts, deletePost, updatePost, addComment, getPostById, createNotification, getUserByName, toggleLike, getPostLikes, incrementShare, deleteAllPosts, getPostStats } from '../services/dynamo.service'
 
 const router = Router()
 const upload = multer({ storage: multer.memoryStorage() })
@@ -19,6 +19,27 @@ router.get('/', async (req, res) => {
     res.json(posts)
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch posts' })
+  }
+})
+
+/* ---------- GET USER POSTS ---------- */
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const viewerRole = req.query.role as string | undefined
+
+    // Get all posts
+    const allPosts = await getPosts(viewerRole)
+
+    // Filter by user ID
+    const userPosts = allPosts.filter((post: any) =>
+      post.userId === userId || post.author === userId
+    )
+
+    res.json(userPosts)
+  } catch (err) {
+    console.error('Get User Posts Error:', err)
+    res.status(500).json({ error: 'Failed to fetch user posts' })
   }
 })
 
@@ -42,7 +63,7 @@ router.get('/:id', async (req, res) => {
 /* ---------- CREATE POST ---------- */
 router.post('/', upload.array('files'), async (req, res) => {
   try {
-    const { content, author, authorType, authorRole, image, video } = req.body
+    const { content, author, authorType, authorRole, image, video, isSensitiveContent, userId } = req.body
 
     // ✅ Handle Multiple Files (Legacy / Direct Upload)
     const files = req.files as Express.Multer.File[] | undefined
@@ -75,8 +96,10 @@ router.post('/', upload.array('files'), async (req, res) => {
     const post = await createPost({
       content,
       author: author || 'You',
+      userId: userId || undefined,
       authorType: authorType || 'user',
       authorRole: authorRole || 'patient', // Default to patient if not provided for safety
+      isSensitiveContent: isSensitiveContent === true || isSensitiveContent === 'true',
       images,
       videos,
       // Backwards Compatibility
@@ -260,6 +283,35 @@ router.post('/:id/share', async (req, res) => {
   } catch (err) {
     console.error('Share Error:', err)
     res.status(500).json({ error: 'Failed to share post' })
+  }
+})
+
+/* ---------- ADMIN: GET POST STATS ---------- */
+router.get('/admin/stats', async (req, res) => {
+  try {
+    // TODO: Add admin authentication check
+    const stats = await getPostStats()
+    res.json(stats)
+  } catch (err) {
+    console.error('Stats Error:', err)
+    res.status(500).json({ error: 'Failed to fetch post statistics' })
+  }
+})
+
+/* ---------- ADMIN: BULK DELETE POSTS ---------- */
+router.delete('/admin/bulk', async (req, res) => {
+  try {
+    // TODO: Add admin authentication check
+    const { keepAI = true, keepWithMedia = true } = req.body
+
+    console.log('🗑️ Bulk deleting posts with options:', { keepAI, keepWithMedia })
+    const result = await deleteAllPosts({ keepAI, keepWithMedia })
+
+    console.log(`✅ Deleted ${result.deletedCount} posts out of ${result.totalScanned} total`)
+    res.json(result)
+  } catch (err) {
+    console.error('Bulk Delete Error:', err)
+    res.status(500).json({ error: 'Failed to delete posts' })
   }
 })
 

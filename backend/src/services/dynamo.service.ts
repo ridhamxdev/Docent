@@ -15,14 +15,16 @@ export interface Post {
   id: string
   content: string
   author: string
+  userId?: string // Author's user ID
   authorType?: 'user' | 'ai'
-  authorRole?: 'dentist' | 'student' | 'patient' | 'admin' // Added role
+  authorRole?: 'dentist' | 'student' | 'patient' | 'admin'
   image?: string
   video?: string
   images?: string[]
   videos?: string[]
   createdAt: number
   type?: 'post' | 'story'
+  isSensitiveContent?: boolean // For blood/serious treatment content
   [key: string]: any
 }
 
@@ -254,12 +256,13 @@ export async function getPosts(viewerRole?: string, author?: string) {
   // ROLE-BASED FILTERING
   if (viewerRole === 'patient') {
     // Patients see only dentist posts, Admin/AI posts, or explicit Patient posts
-    // They do NOT see Student discussions
+    // They do NOT see Student discussions OR sensitive content
     posts = posts.filter((p: Post) =>
-      p.authorType === 'ai' ||
-      p.authorRole === 'dentist' ||
-      p.authorRole === 'patient' ||
-      !p.authorRole // Legacy posts fallback
+      (p.authorType === 'ai' ||
+        p.authorRole === 'dentist' ||
+        p.authorRole === 'patient' ||
+        !p.authorRole) && // Legacy posts fallback
+      !p.isSensitiveContent // HIDE sensitive medical content from patients
     )
   } else if (viewerRole === 'student') {
     // Students see everything except maybe private dentist-only (not implemented yet)
@@ -314,6 +317,84 @@ export async function updatePost(id: string, updates: Partial<Post>) {
 
   return { success: true, id, ...updates }
 }
+
+// Delete posts with selective criteria
+export async function deleteAllPosts(options?: { keepAI?: boolean; keepWithMedia?: boolean }) {
+  const keepAI = options?.keepAI ?? true; // Default: keep AI posts
+  const keepWithMedia = options?.keepWithMedia ?? true; // Default: keep posts with media
+
+  // Get all posts
+  const result = await docClient.send(
+    new ScanCommand({
+      TableName: TABLE_NAME,
+    })
+  );
+
+  const posts = (result.Items || []) as unknown as Post[];
+  let deletedCount = 0;
+
+  for (const post of posts) {
+    let shouldDelete = true;
+
+    // Keep AI posts if option enabled
+    if (keepAI && post.authorType === 'ai') {
+      shouldDelete = false;
+    }
+
+    // Keep posts with media if option enabled
+    if (keepWithMedia) {
+      const hasMedia = post.image || post.video ||
+        (post.images && post.images.length > 0) ||
+        (post.videos && post.videos.length > 0);
+      if (hasMedia) {
+        shouldDelete = false;
+      }
+    }
+
+    // Delete if criteria met
+    if (shouldDelete && post.type !== 'story') { // Don't delete stories here
+      await deletePost(post.id);
+      deletedCount++;
+    }
+  }
+
+  return { deletedCount, totalScanned: posts.length };
+}
+
+// Get post statistics
+export async function getPostStats() {
+  const result = await docClient.send(
+    new ScanCommand({
+      TableName: TABLE_NAME,
+    })
+  );
+
+  const items = (result.Items || []) as unknown as Post[];
+  const posts = items.filter(item => item.type !== 'story');
+
+  const stats = {
+    total: posts.length,
+    byRole: {
+      dentist: posts.filter(p => p.authorRole === 'dentist').length,
+      student: posts.filter(p => p.authorRole === 'student').length,
+      patient: posts.filter(p => p.authorRole === 'patient').length,
+      ai: posts.filter(p => p.authorType === 'ai').length,
+    },
+    withMedia: posts.filter(p =>
+      p.image || p.video ||
+      (p.images && p.images.length > 0) ||
+      (p.videos && p.videos.length > 0)
+    ).length,
+    textOnly: posts.filter(p =>
+      !p.image && !p.video &&
+      (!p.images || p.images.length === 0) &&
+      (!p.videos || p.videos.length === 0)
+    ).length,
+  };
+
+  return stats;
+}
+
 
 export async function addComment(postId: string, comment: any) {
   try {
