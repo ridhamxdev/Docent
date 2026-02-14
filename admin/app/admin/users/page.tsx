@@ -11,7 +11,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("all");
+    const [activeTab, setActiveTab] = useState("dentist");
 
     // Search & Pagination
     const [searchTerm, setSearchTerm] = useState("");
@@ -141,7 +141,7 @@ export default function UsersPage() {
 
                 {/* Tabs */}
                 <div className="flex bg-zinc-900 border border-zinc-800 p-1 rounded-lg overflow-x-auto">
-                    {['all', 'doctor', 'student', 'patient'].map((tab) => (
+                    {['dentist', 'student', 'patient'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -151,7 +151,7 @@ export default function UsersPage() {
                                 }`}
                         >
                             {tab} <span className="text-xs opacity-50 ml-1">
-                                {tab === 'all' ? users.length : users.filter(u => u.role === tab).length}
+                                {users.filter(u => u.role === tab).length}
                             </span>
                         </button>
                     ))}
@@ -166,7 +166,7 @@ export default function UsersPage() {
                                 <th className="px-6 py-4">Name</th>
                                 <th className="px-6 py-4">Email</th>
                                 <th className="px-6 py-4">Role</th>
-                                <th className="px-6 py-4">Status</th>
+                                {activeTab !== 'patient' && <th className="px-6 py-4">Status</th>}
                                 <th className="px-6 py-4">Signed Up</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -191,31 +191,33 @@ export default function UsersPage() {
                                                 <span
                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${user.role === "admin"
                                                         ? "bg-purple-500/10 text-purple-400"
-                                                        : ((user.role as string) === "doctor" || user.role === "dentist")
+                                                        : ((user.role as string) === "dentist" || user.role === "dentist")
                                                             ? "bg-blue-500/10 text-blue-400"
                                                             : user.role === "student"
                                                                 ? "bg-teal-500/10 text-teal-400"
                                                                 : "bg-pink-500/10 text-pink-400"
                                                         }`}
                                                 >
-                                                    {user.role === 'dentist' ? 'Dentist' : user.role}
+                                                    {user.role === 'dentist' ? 'Dentist (Legacy)' : user.role}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {((user.role as string) === "doctor" || user.role === "dentist" || user.role === "student") ? (
-                                                    user.isVerified ? (
-                                                        <div className="flex items-center gap-1.5 text-green-400">
-                                                            <Check className="w-3.5 h-3.5" /> Verified
-                                                        </div>
+                                            {activeTab !== 'patient' && (
+                                                <td className="px-6 py-4">
+                                                    {((user.role as string) === "dentist" || user.role === "student") ? (
+                                                        user.isVerified ? (
+                                                            <div className="flex items-center gap-1.5 text-green-400">
+                                                                <Check className="w-3.5 h-3.5" /> Verified
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 text-amber-400">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Pending
+                                                            </div>
+                                                        )
                                                     ) : (
-                                                        <div className="flex items-center gap-1.5 text-amber-400">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" /> Pending
-                                                        </div>
-                                                    )
-                                                ) : (
-                                                    <span className="text-zinc-600">-</span>
-                                                )}
-                                            </td>
+                                                        <span className="text-zinc-600">-</span>
+                                                    )}
+                                                </td>
+                                            )}
                                             <td className="px-6 py-4">
                                                 {/* @ts-ignore */}
                                                 {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}
@@ -309,7 +311,7 @@ export default function UsersPage() {
                                 </select>
                             </div>
 
-                            {((editForm.role as string) === 'doctor' || editForm.role === 'dentist' || editForm.role === 'student') && (
+                            {((editForm.role as string) === 'dentist' || editForm.role === 'dentist' || editForm.role === 'student') && (
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-950 border border-zinc-800">
                                     <input
                                         type="checkbox"

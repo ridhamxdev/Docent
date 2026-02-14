@@ -31,8 +31,8 @@ export const requestAppointment = async (req: Request, res: Response) => {
 
 export const fetchAppointments = async (req: Request, res: Response) => {
     try {
-        const { doctorId } = req.params;
-        const appointments = await getAppointments(doctorId);
+        const { dentistId } = req.params;
+        const appointments = await getAppointments(dentistId);
         res.json(appointments);
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch appointments' });

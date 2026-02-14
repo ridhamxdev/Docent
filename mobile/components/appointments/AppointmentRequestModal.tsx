@@ -7,14 +7,14 @@ import { apiClient } from '../../lib/apiClient';
 
 interface Props {
     visible: boolean;
-    doctorId: string;
-    doctorName?: string;
+    dentistId: string;
+    dentistName?: string;
     fee?: number;
     onClose: () => void;
     onSuccess: () => void;
 }
 
-export default function AppointmentRequestModal({ visible, doctorId, doctorName, fee = 500, onClose, onSuccess }: Props) {
+export default function AppointmentRequestModal({ visible, dentistId, dentistName, fee = 500, onClose, onSuccess }: Props) {
     const [loading, setLoading] = useState(false);
     const [reason, setReason] = useState('');
     const [date, setDate] = useState(new Date());
@@ -78,8 +78,8 @@ export default function AppointmentRequestModal({ visible, doctorId, doctorName,
             // Using a generic endpoint. Adjust if backend has specific route.
             // Based on frontend messages controller logic `requestAppointment`
             await apiClient.post('/appointments', {
-                doctorId,
-                doctorName,
+                dentistId,
+                dentistName,
                 date: date.toISOString().split('T')[0],
                 time,
                 reason,

@@ -9,7 +9,7 @@ import ProfileStats from '../../components/profile/ProfileStats';
 import UserPostsGrid from '../../components/profile/UserPostsGrid';
 import EditProfileModal from '../../components/profile/EditProfileModal';
 import AddVisitModal from '../../components/appointments/AddVisitModal';
-import DoctorSlotsList from '../../components/appointments/DoctorSlotsList';
+import DentistSlotsList from '../../components/appointments/DentistSlotsList';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
@@ -41,6 +41,11 @@ export default function ProfileScreen() {
         fetchStats();
     };
 
+    const handleLogout = async () => {
+        await logout();
+        router.replace('/welcome');
+    };
+
     const handleMenu = () => {
         Alert.alert(
             "Menu",
@@ -48,7 +53,7 @@ export default function ProfileScreen() {
             [
                 { text: "Edit Profile", onPress: () => setShowEditModal(true) },
                 { text: "Settings", onPress: () => router.push('/settings') },
-                { text: "Log Out", onPress: logout, style: "destructive" },
+                { text: "Log Out", onPress: handleLogout, style: "destructive" },
                 { text: "Cancel", style: "cancel" }
             ]
         );
@@ -67,7 +72,7 @@ export default function ProfileScreen() {
                     user={user}
                     isOwner={true}
                     onEdit={() => setShowEditModal(true)}
-                    onMenu={() => router.push('/settings')}
+                    onMenu={handleMenu}
                 />
 
                 <ProfileStats
@@ -116,7 +121,7 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
 
                         <Text className="font-bold text-gray-800 mb-2 px-1">Your Slots</Text>
-                        <DoctorSlotsList userId={user.uid} refreshTrigger={refreshSlotTrigger} />
+                        <DentistSlotsList userId={user.uid} refreshTrigger={refreshSlotTrigger} />
                     </View>
                 ) : (
                     <View className="p-4 bg-gray-50 min-h-[200px]">
@@ -161,7 +166,7 @@ export default function ProfileScreen() {
                             )}
                         </View>
 
-                        <TouchableOpacity onPress={logout} className="mt-6 flex-row items-center justify-center p-4 bg-red-50 rounded-xl border border-red-100">
+                        <TouchableOpacity onPress={handleLogout} className="mt-6 flex-row items-center justify-center p-4 bg-red-50 rounded-xl border border-red-100">
                             <Ionicons name="log-out-outline" size={20} color="#EF4444" />
                             <Text className="text-red-600 font-bold ml-2">Log Out</Text>
                         </TouchableOpacity>

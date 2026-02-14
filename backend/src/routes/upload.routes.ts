@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as s3Service from '../services/s3.service';
+import { checkUploadPermission, updatePermissionRequest } from '../services/dynamo.service';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -9,6 +10,21 @@ router.post('/', upload.single('file'), async (req: Request, res: Response) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        if (req.body.role === 'patient') {
+            const { patientId, dentistId } = req.body;
+            if (!patientId || !dentistId) {
+                return res.status(400).json({ error: 'Missing patientId or dentistId for verification' });
+            }
+
+            const permission = await checkUploadPermission(patientId, dentistId);
+            if (!permission) {
+                return res.status(403).json({ error: 'Permission denied. You need approval from the doctor to upload files.' });
+            }
+
+            // Mark permission as used (strict "every time" rule)
+            await updatePermissionRequest(permission.id, 'used');
         }
 
         const folder = req.body.folder || 'misc';

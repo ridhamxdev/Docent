@@ -5,11 +5,11 @@ import { notifyUser } from '../socket'
 const router = Router()
 
 /* ---------- APPOINTMENTS ---------- */
-// GET /messages/appointments/:doctorId
-router.get('/appointments/:doctorId', async (req, res) => {
+// GET /messages/appointments/:dentistId
+router.get('/appointments/:dentistId', async (req, res) => {
     try {
-        const { doctorId } = req.params
-        const appointments = await getAppointments(doctorId)
+        const { dentistId } = req.params
+        const appointments = await getAppointments(dentistId)
         res.json(appointments)
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch appointments' })

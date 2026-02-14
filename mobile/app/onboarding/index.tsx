@@ -2,7 +2,7 @@ import { View, Text, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView } 
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import DoctorForm from '../../components/registration/DoctorForm';
+import DentistForm from '../../components/registration/DentistForm';
 import StudentForm from '../../components/registration/StudentForm';
 import PatientForm from '../../components/registration/PatientForm';
 import { StatusBar } from 'expo-status-bar';
@@ -35,7 +35,7 @@ export default function OnboardingScreen() {
                     </View>
 
                     <View className="bg-white rounded-xl">
-                        {user.role === 'doctor' && <DoctorForm />}
+                        {user.role === 'dentist' && <DentistForm />}
                         {user.role === 'student' && <StudentForm />}
                         {user.role === 'patient' && <PatientForm />}
                     </View>

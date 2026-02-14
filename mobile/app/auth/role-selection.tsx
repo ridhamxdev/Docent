@@ -36,7 +36,7 @@ export default function RoleSelectionScreen() {
                 setLoading(false);
             }
         } else {
-            // Doctors and Students need to complete profile
+            // dentists and Students need to complete profile
             router.push({
                 pathname: '/auth/complete-profile',
                 params: { role }

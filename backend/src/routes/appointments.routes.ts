@@ -11,12 +11,12 @@ import {
 
 const router = Router()
 
-/* ---------- CREATE SLOT (Doctor) ---------- */
+/* ---------- CREATE SLOT (dentist) ---------- */
 router.post('/slots', async (req, res) => {
     try {
-        const { doctorId, date, time, fee, capacity } = req.body
+        const { dentistId, date, time, fee, capacity } = req.body
         const slot = await createVisitSlot({
-            doctorId,
+            dentistId,
             date,
             time,
             fee: Number(fee),
@@ -29,10 +29,10 @@ router.post('/slots', async (req, res) => {
     }
 })
 
-/* ---------- GET SLOTS (Doctor/Patient) ---------- */
-router.get('/slots/:doctorId', async (req, res) => {
+/* ---------- GET SLOTS (dentist/Patient) ---------- */
+router.get('/slots/:dentistId', async (req, res) => {
     try {
-        const slots = await getVisitSlots(req.params.doctorId)
+        const slots = await getVisitSlots(req.params.dentistId)
         res.json(slots)
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch slots' })
@@ -42,7 +42,7 @@ router.get('/slots/:doctorId', async (req, res) => {
 /* ---------- BOOK APPOINTMENT (Patient) ---------- */
 router.post('/book', async (req, res) => {
     try {
-        const { slotId, patientId, patientName, doctorId } = req.body
+        const { slotId, patientId, patientName, dentistId } = req.body
 
         // 1. Check Slot Availability
         const slot = await getSlotById(slotId)
@@ -56,7 +56,7 @@ router.post('/book', async (req, res) => {
         const appointment = await createAppointment({
             patientId,
             patientName,
-            doctorId,
+            dentistId,
             date: `${slot.date} ${slot.time}`, // Store formatted date for easy display
             status: 'approved' // Auto-approve for now since paid
         })
@@ -75,11 +75,11 @@ router.post('/book', async (req, res) => {
     }
 })
 
-/* ---------- YOUR APPOINTMENTS (Doctor View) ---------- */
-// Reusing getAppointments from dynamo service which allows filtering by doctorId
-router.get('/doctor/:doctorId', async (req, res) => {
+/* ---------- YOUR APPOINTMENTS (dentist View) ---------- */
+// Reusing getAppointments from dynamo service which allows filtering by dentistId
+router.get('/dentist/:dentistId', async (req, res) => {
     try {
-        const appointments = await getAppointments(req.params.doctorId)
+        const appointments = await getAppointments(req.params.dentistId)
         res.json(appointments)
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch appointments' })

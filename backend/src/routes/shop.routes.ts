@@ -34,7 +34,7 @@ router.get('/quiz', async (req: Request, res: Response) => {
     res.json(quizzes.length > 0 ? quizzes[0] : null)
 })
 
-// POST /shop/quiz (Doctor Only)
+// POST /shop/quiz (dentist Only)
 router.post('/quiz', async (req: Request, res: Response) => {
     try {
         const quiz = await createQuiz(req.body)

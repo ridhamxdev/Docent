@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 export default function AdminDashboard() {
     const [stats, setStats] = useState({
         totalUsers: 0,
-        totalDoctors: 0,
+        totaldentists: 0,
         pendingVerifications: 0,
         aiPostsGenerated: 0 // Placeholder or fetch if possible
     });
@@ -19,13 +19,13 @@ export default function AdminDashboard() {
                 const usersSnap = await getDocs(collection(db, "users"));
                 const totalUsers = usersSnap.size;
 
-                let totalDoctors = 0;
+                let totaldentists = 0;
                 let pendingVerifications = 0;
 
                 usersSnap.forEach(doc => {
                     const data = doc.data();
-                    if (data.role === 'doctor') {
-                        totalDoctors++;
+                    if (data.role === 'dentist') {
+                        totaldentists++;
                         if (!data.isVerified) {
                             pendingVerifications++;
                         }
@@ -34,7 +34,7 @@ export default function AdminDashboard() {
 
                 setStats({
                     totalUsers,
-                    totalDoctors,
+                    totaldentists,
                     pendingVerifications,
                     aiPostsGenerated: 0 // connect to backend later if needed
                 });
@@ -60,8 +60,8 @@ export default function AdminDashboard() {
                     <p className="text-3xl font-bold text-white mt-2">{stats.totalUsers}</p>
                 </div>
                 <div className="p-6 rounded-xl bg-zinc-900 border border-zinc-800">
-                    <h3 className="text-sm font-medium text-zinc-400">Total Doctors</h3>
-                    <p className="text-3xl font-bold text-white mt-2">{stats.totalDoctors}</p>
+                    <h3 className="text-sm font-medium text-zinc-400">Total dentists</h3>
+                    <p className="text-3xl font-bold text-white mt-2">{stats.totaldentists}</p>
                 </div>
                 <div className="p-6 rounded-xl bg-zinc-900 border border-zinc-800">
                     <h3 className="text-sm font-medium text-zinc-400">Pending Verifications</h3>

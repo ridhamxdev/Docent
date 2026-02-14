@@ -16,7 +16,7 @@ export interface Post {
   content: string
   author: string
   authorType?: 'user' | 'ai'
-  authorRole?: 'doctor' | 'student' | 'patient' | 'admin' // Added role
+  authorRole?: 'dentist' | 'student' | 'patient' | 'admin' // Added role
   image?: string
   video?: string
   images?: string[]
@@ -74,13 +74,14 @@ export interface Message {
   createdAt: number
   read: boolean
   type: 'message'
+  metadata?: any
 }
 
 export interface Appointment {
   id: string
   patientId: string
   patientName: string
-  doctorId: string
+  dentistId: string
   status: 'pending' | 'approved' | 'rejected'
   opdFileUrl?: string
   date?: string
@@ -123,9 +124,10 @@ export interface User {
   type: 'user'
 }
 
+
 export interface VisitSlot {
   id: string
-  doctorId: string
+  dentistId: string
   date: string
   time: string
   fee: number
@@ -133,6 +135,29 @@ export interface VisitSlot {
   bookedCount: number
   status: 'open' | 'full'
   type: 'visit_slot'
+}
+
+export interface Meeting {
+  id: string
+  patientId: string
+  dentistId: string // The doctor/dentist
+  date: string
+  time: string
+  status: 'pending' | 'approved' | 'rejected' | 'completed'
+  videoUrl?: string // The manual link provided by the doctor
+  createdAt: number
+  type: 'meeting'
+}
+
+export interface PermissionRequest {
+  id: string
+  patientId: string
+  dentistId: string
+  fileType: 'image' | 'pdf' | 'other'
+  status: 'pending' | 'approved' | 'rejected' | 'used'
+  createdAt: number
+  expiresAt: number // Optional expiration
+  type: 'permission_request'
 }
 
 export async function createUser(userData: Partial<User>) {
@@ -228,19 +253,19 @@ export async function getPosts(viewerRole?: string, author?: string) {
 
   // ROLE-BASED FILTERING
   if (viewerRole === 'patient') {
-    // Patients see only Doctor posts, Admin/AI posts, or explicit Patient posts
+    // Patients see only dentist posts, Admin/AI posts, or explicit Patient posts
     // They do NOT see Student discussions
     posts = posts.filter((p: Post) =>
       p.authorType === 'ai' ||
-      p.authorRole === 'doctor' ||
+      p.authorRole === 'dentist' ||
       p.authorRole === 'patient' ||
       !p.authorRole // Legacy posts fallback
     )
   } else if (viewerRole === 'student') {
-    // Students see everything except maybe private doctor-only (not implemented yet)
+    // Students see everything except maybe private dentist-only (not implemented yet)
     posts = posts
-  } else if (viewerRole === 'doctor') {
-    // Doctors see everything
+  } else if (viewerRole === 'dentist') {
+    // dentists see everything
     posts = posts
   }
 
@@ -535,7 +560,7 @@ export async function createAppointment(data: Partial<Appointment>) {
   return appointment
 }
 
-export async function getAppointments(doctorId: string) {
+export async function getAppointments(dentistId: string) {
   try {
     const result = await docClient.send(
       new ScanCommand({
@@ -544,7 +569,7 @@ export async function getAppointments(doctorId: string) {
     )
 
     return (result.Items || []).filter((item: any) =>
-      item.type === 'appointment' && item.doctorId === doctorId
+      item.type === 'appointment' && item.dentistId === dentistId
     )
   } catch (e) {
     console.error('Error fetching appointments', e)
@@ -572,14 +597,14 @@ export async function createVisitSlot(data: Partial<VisitSlot>) {
   return slot
 }
 
-export async function getVisitSlots(doctorId: string) {
+export async function getVisitSlots(dentistId: string) {
   try {
     const result = await docClient.send(
       new ScanCommand({
         TableName: TABLE_NAME,
-        FilterExpression: 'doctorId = :did AND #type = :type',
+        FilterExpression: 'dentistId = :did AND #type = :type',
         ExpressionAttributeValues: {
-          ':did': doctorId,
+          ':did': dentistId,
           ':type': 'visit_slot'
         },
         ExpressionAttributeNames: {
@@ -1097,5 +1122,153 @@ export async function incrementShare(postId: string) {
   } catch (e) {
     console.error('Error incrementing shares', e)
     throw e
+  }
+}
+
+/* ---------- MEETINGS ---------- */
+
+export async function createMeeting(data: Partial<Meeting>) {
+  const meeting = {
+    id: uuid(),
+    createdAt: Date.now(),
+    status: 'pending',
+    type: 'meeting',
+    ...data
+  }
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: meeting
+    })
+  )
+  return meeting
+}
+
+export async function getMeetings(userId: string) {
+  try {
+    // Scan is inefficient but sticking to pattern. Ideally GSI on patientId/dentistId.
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: '#type = :type AND (patientId = :uid OR dentistId = :uid)',
+        ExpressionAttributeNames: { '#type': 'type' },
+        ExpressionAttributeValues: { ':type': 'meeting', ':uid': userId }
+      })
+    )
+    return (result.Items || []).sort((a: any, b: any) => b.createdAt - a.createdAt)
+  } catch (e) {
+    console.error('Error fetching meetings', e)
+    return []
+  }
+}
+
+export async function updateMeeting(id: string, updates: Partial<Meeting>) {
+  const allowedUpdates = ['status', 'videoUrl', 'date', 'time'];
+  let updateExpression = 'set'
+  const expressionAttributeNames: any = {}
+  const expressionAttributeValues: any = {}
+
+  let hasUpdates = false;
+  allowedUpdates.forEach((key, index) => {
+    const field = key as keyof Meeting;
+    if (updates[field] !== undefined) {
+      updateExpression += ` #key${index} = :val${index},`
+      expressionAttributeNames[`#key${index}`] = field
+      expressionAttributeValues[`:val${index}`] = updates[field]
+      hasUpdates = true;
+    }
+  })
+
+  if (!hasUpdates) return { success: false, message: "No valid updates" };
+
+  // Remove trailing comma
+  updateExpression = updateExpression.slice(0, -1);
+
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { id },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: expressionAttributeNames,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: 'ALL_NEW'
+    })
+  )
+  return { success: true, id, ...updates }
+}
+
+/* ---------- PERMISSIONS ---------- */
+
+export async function createPermissionRequest(data: Partial<PermissionRequest>) {
+  const request = {
+    id: uuid(),
+    createdAt: Date.now(),
+    status: 'pending',
+    type: 'permission_request',
+    ...data
+  }
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: request
+    })
+  )
+  return request
+}
+
+export async function getPermissionRequests(userId: string, role: 'patient' | 'dentist') {
+  try {
+    const filterKey = role === 'patient' ? 'patientId' : 'dentistId';
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: '#type = :type AND #key = :uid',
+        ExpressionAttributeNames: { '#type': 'type', '#key': filterKey },
+        ExpressionAttributeValues: { ':type': 'permission_request', ':uid': userId }
+      })
+    )
+    return (result.Items || []).sort((a: any, b: any) => b.createdAt - a.createdAt)
+  } catch (e) {
+    console.error('Error fetching permission requests', e)
+    return []
+  }
+}
+
+export async function updatePermissionRequest(id: string, status: 'approved' | 'rejected' | 'used') {
+  await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { id },
+      UpdateExpression: 'set #status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':status': status },
+      ReturnValues: 'ALL_NEW'
+    })
+  )
+  return { success: true, id, status }
+}
+
+export async function checkUploadPermission(patientId: string, dentistId: string) {
+  try {
+    const result = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: '#type = :type AND patientId = :pid AND dentistId = :did AND #status = :status',
+        ExpressionAttributeNames: { '#type': 'type', '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':type': 'permission_request',
+          ':pid': patientId,
+          ':did': dentistId,
+          ':status': 'approved'
+        }
+      })
+    )
+    // Return the first approved request if any
+    return (result.Items && result.Items.length > 0) ? result.Items[0] : null
+  } catch (e) {
+    console.error('Error checking permission', e)
+    return null
   }
 }

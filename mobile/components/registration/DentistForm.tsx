@@ -6,7 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-export default function DoctorForm() {
+export default function DentistForm() {
     const { user, updateProfile } = useAuth();
     const router = useRouter();
 

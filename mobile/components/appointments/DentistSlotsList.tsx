@@ -17,15 +17,15 @@ interface Props {
     refreshTrigger?: number; // Prop to force refresh
 }
 
-export default function DoctorSlotsList({ userId, refreshTrigger }: Props) {
+export default function DentistSlotsList({ userId, refreshTrigger }: Props) {
     const [slots, setSlots] = useState<Slot[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchSlots = async () => {
             try {
-                // Assuming endpoint exists or we filter by doctor in appointments query
-                const data = await apiClient.get<Slot[]>(`/appointments/slots?doctorId=${userId}`);
+                // Assuming endpoint exists or we filter by dentist in appointments query
+                const data = await apiClient.get<Slot[]>(`/appointments/slots?dentistId=${userId}`);
                 if (Array.isArray(data)) {
                     setSlots(data);
                 }

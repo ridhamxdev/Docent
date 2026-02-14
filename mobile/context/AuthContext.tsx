@@ -199,7 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 uid: result.user.uid,
                 email,
                 role,
-                isVerified: role === 'dentist' ? false : true, // Doctors need verification
+                isVerified: role === 'dentist' ? false : true, // dentists need verification
                 isOnboarded: false,
                 createdAt: new Date().toISOString(),
                 ...additionalData
@@ -254,10 +254,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         try {
             await signOut(auth);
-            setUser(null);
-            // router.replace('/'); // handled by component
         } catch (error) {
             console.error("Logout error:", error);
+        } finally {
+            setUser(null);
         }
     };
 

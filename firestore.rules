@@ -14,32 +14,32 @@ service cloud.firestore {
     }
 
     // Appointments
-    // Doctors can read appointments assigned to them (or confirmed ones)
+    // dentists can read appointments assigned to them (or confirmed ones)
     // Patients can read their own appointments
     // Create/Update logic handles business rules via backend/transaction, but basic rules here:
     match /appointments/{appointmentId} {
       allow read: if request.auth != null && (
         resource.data.patientId == request.auth.uid || 
-        resource.data.doctorId == request.auth.uid
+        resource.data.dentistId == request.auth.uid
       );
       // Creation is currently done via Server Action / API mostly, but if client does it:
       allow create: if request.auth != null && request.resource.data.patientId == request.auth.uid;
       // Optimistic updates (if any)
       allow update: if request.auth != null && (
         resource.data.patientId == request.auth.uid || 
-        resource.data.doctorId == request.auth.uid
+        resource.data.dentistId == request.auth.uid
       );
     }
 
     // Slots
     // Public read (patients need to see slots)
-    // Doctors write their own slots
+    // dentists write their own slots
     match /slots/{slotId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.token.role == 'doctor'; // If custom claims used
-      // Fallback if no custom claims: check doctorId field
-      allow create: if request.auth != null && request.resource.data.doctorId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.doctorId == request.auth.uid;
+      allow write: if request.auth != null && request.auth.token.role == 'dentist'; // If custom claims used
+      // Fallback if no custom claims: check dentistId field
+      allow create: if request.auth != null && request.resource.data.dentistId == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.dentistId == request.auth.uid;
     }
 
     // Posts & Content

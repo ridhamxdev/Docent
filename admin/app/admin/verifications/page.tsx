@@ -10,16 +10,16 @@ import { apiClient } from "@/lib/apiClient";
 const API_BASE_URL = "http://localhost:5555"; // Backend URL for static files
 
 export default function VerificationsPage() {
-    const [pendingDoctors, setPendingDoctors] = useState<User[]>([]);
+    const [pendingdentists, setPendingdentists] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetchPendingDoctors();
+        fetchPendingdentists();
     }, []);
 
-    async function fetchPendingDoctors() {
+    async function fetchPendingdentists() {
         try {
-            // Query all unverified users (role is 'dentist' or 'student', NOT 'doctor')
+            // Query all unverified users (role is 'dentist' or 'student', NOT 'dentist')
             const q = query(
                 collection(db, "users"),
                 where("isVerified", "==", false)
@@ -34,7 +34,7 @@ export default function VerificationsPage() {
                     users.push(data);
                 }
             });
-            setPendingDoctors(users);
+            setPendingdentists(users);
         } catch (error) {
             console.error("Error fetching pending users:", error);
         } finally {
@@ -43,17 +43,17 @@ export default function VerificationsPage() {
     }
 
     async function handleVerify(uid: string) {
-        if (!confirm("Are you sure you want to verify this doctor?")) return;
+        if (!confirm("Are you sure you want to verify this dentist?")) return;
 
         try {
             // Secure backend call
             await apiClient.put(`/admin/users/${uid}/verify`, { isVerified: true });
 
             // Update local state
-            setPendingDoctors(prev => prev.filter(doc => doc.uid !== uid));
+            setPendingdentists(prev => prev.filter(doc => doc.uid !== uid));
         } catch (error) {
-            console.error("Error verifying doctor:", error);
-            alert("Failed to verify doctor. Check console.");
+            console.error("Error verifying dentist:", error);
+            alert("Failed to verify dentist. Check console.");
         }
     }
 
@@ -63,9 +63,9 @@ export default function VerificationsPage() {
         try {
             // Secure backend delete
             await apiClient.delete(`/admin/users/${uid}`);
-            setPendingDoctors(prev => prev.filter(doc => doc.uid !== uid));
+            setPendingdentists(prev => prev.filter(doc => doc.uid !== uid));
         } catch (error) {
-            console.error("Error rejecting doctor:", error);
+            console.error("Error rejecting dentist:", error);
             alert("Failed to reject application.");
         }
     }
@@ -85,56 +85,56 @@ export default function VerificationsPage() {
             <h1 className="text-2xl font-bold text-white">Professional Verification</h1>
             <p className="text-zinc-400">Review documents and approve dentist & student accounts.</p>
 
-            {pendingDoctors.length === 0 ? (
+            {pendingdentists.length === 0 ? (
                 <div className="p-8 rounded-xl bg-zinc-900 border border-zinc-800 text-center text-zinc-500">
                     No pending verifications found.
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {pendingDoctors.map((doctor) => (
-                        <div key={doctor.uid} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+                    {pendingdentists.map((dentist) => (
+                        <div key={dentist.uid} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <h3 className="font-bold text-white text-lg">{doctor.displayName || "No Name"}</h3>
-                                    <p className="text-zinc-400 text-sm">{doctor.email}</p>
+                                    <h3 className="font-bold text-white text-lg">{dentist.displayName || "No Name"}</h3>
+                                    <p className="text-zinc-400 text-sm">{dentist.email}</p>
                                 </div>
-                                <span className={`text-xs px-2 py-1 rounded-full uppercase font-medium ${doctor.role === 'dentist'
-                                        ? 'bg-blue-500/10 text-blue-400'
-                                        : 'bg-teal-500/10 text-teal-400'
+                                <span className={`text-xs px-2 py-1 rounded-full uppercase font-medium ${dentist.role === 'dentist'
+                                    ? 'bg-blue-500/10 text-blue-400'
+                                    : 'bg-teal-500/10 text-teal-400'
                                     }`}>
-                                    {doctor.role === 'dentist' ? 'Dentist' : 'Student'}
+                                    {dentist.role === 'dentist' ? 'Dentist' : 'Student'}
                                 </span>
                             </div>
 
                             <div className="space-y-2 text-sm text-zinc-300">
-                                {doctor.role === 'dentist' ? (
+                                {dentist.role === 'dentist' ? (
                                     <>
                                         <div className="flex justify-between">
                                             <span>Qualification:</span>
-                                            <span className="font-medium text-white">{doctor.qualification || doctor.qualifications || "N/A"}</span>
+                                            <span className="font-medium text-white">{dentist.qualification || dentist.qualifications || "N/A"}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Specialization:</span>
-                                            <span className="font-medium text-white">{doctor.specialization || "N/A"}</span>
+                                            <span className="font-medium text-white">{dentist.specialization || "N/A"}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Experience:</span>
-                                            <span className="font-medium text-white">{doctor.experience || "N/A"}</span>
+                                            <span className="font-medium text-white">{dentist.experience || "N/A"}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Clinic:</span>
-                                            <span className="font-medium text-white">{doctor.clinicAddress || "N/A"}</span>
+                                            <span className="font-medium text-white">{dentist.clinicAddress || "N/A"}</span>
                                         </div>
                                     </>
                                 ) : (
                                     <>
                                         <div className="flex justify-between">
                                             <span>College:</span>
-                                            <span className="font-medium text-white">{doctor.collegeName || "N/A"}</span>
+                                            <span className="font-medium text-white">{dentist.collegeName || "N/A"}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>Year:</span>
-                                            <span className="font-medium text-white">{doctor.yearOfStudy || "N/A"}</span>
+                                            <span className="font-medium text-white">{dentist.yearOfStudy || "N/A"}</span>
                                         </div>
                                     </>
                                 )}
@@ -142,9 +142,9 @@ export default function VerificationsPage() {
 
                             <div className="pt-2 border-t border-zinc-800">
                                 <p className="text-xs text-zinc-500 mb-2">Verification Document</p>
-                                {doctor.documentUrl ? (
+                                {dentist.documentUrl ? (
                                     <a
-                                        href={getDocumentLink(doctor.documentUrl)}
+                                        href={getDocumentLink(dentist.documentUrl)}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="flex items-center gap-2 text-blue-400 text-sm hover:underline"
@@ -159,13 +159,13 @@ export default function VerificationsPage() {
 
                             <div className="pt-4 flex gap-3">
                                 <button
-                                    onClick={() => handleVerify(doctor.uid)}
+                                    onClick={() => handleVerify(dentist.uid)}
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Check className="w-4 h-4" /> Verify
                                 </button>
                                 <button
-                                    onClick={() => handleReject(doctor.uid)}
+                                    onClick={() => handleReject(dentist.uid)}
                                     className="flex-1 bg-zinc-800 hover:bg-red-900/50 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 hover:text-red-400"
                                 >
                                     <X className="w-4 h-4" /> Reject
